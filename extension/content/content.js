@@ -7,8 +7,6 @@
   var extractor = findExtractor(url)
   if (!extractor) return
 
-  console.log("[AIJA] Platform detected:", extractor.name)
-
   injectStyles()
 
   var isDetail = extractor.detectDetailPage(url)
@@ -17,7 +15,6 @@
   if (!anchor) return
 
   var btn = createFloatingButton()
-  console.log("[AIJA] Button injected, page type:", isDetail ? "detail" : isList ? "list" : "unknown")
 
   if (isDetail) {
     btn.addEventListener("click", async function () {
@@ -25,8 +22,8 @@
       try {
         var job = extractor.extractDetail()
         if (!job.title) { showToast("未能提取到岗位信息，请手动复制JD", "error"); return }
-        await aijaImportJobs([job])
-        showToast("已采集: " + job.title)
+        var result = await aijaImportJobs([job])
+        showToast("已采集: " + job.title + (result.skipped > 0 ? " (已存在)" : ""))
       } catch (err) {
         showToast(err.message || "采集失败", "error")
       } finally {
