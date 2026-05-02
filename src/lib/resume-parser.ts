@@ -1,5 +1,6 @@
-import pdfParse from "pdf-parse"
 import mammoth from "mammoth"
+
+const pdfParse = require("pdf-parse")
 
 export async function parsePdf(buffer: Buffer): Promise<string> {
   const data = await pdfParse(buffer)
@@ -11,11 +12,32 @@ export async function parseDocx(buffer: Buffer): Promise<string> {
   return result.value
 }
 
+interface EducationEntry {
+  school?: string
+  degree?: string
+  major?: string
+  time?: string
+  description?: string
+}
+
+interface ExperienceEntry {
+  company?: string
+  title?: string
+  time?: string
+  description?: string
+}
+
+interface ProjectEntry {
+  name?: string
+  role?: string
+  description?: string
+}
+
 interface StructuredResume {
   basics: { name?: string; email?: string; phone?: string; summary?: string }
-  education: { school?: string; degree?: string; major?: string; time?: string }[]
-  experience: { company?: string; title?: string; time?: string; description?: string }[]
-  projects: { name?: string; role?: string; description?: string }[]
+  education: EducationEntry[]
+  experience: ExperienceEntry[]
+  projects: ProjectEntry[]
   skills: string[]
 }
 
