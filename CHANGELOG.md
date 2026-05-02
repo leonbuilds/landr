@@ -33,14 +33,9 @@
 - [x] API Key加密存储、数据脱敏显示
 
 ### 待完成（后续迭代）
-- [ ] Claude Code操控浏览器采集岗位（Boss直聘/拉勾/智联）
-- [ ] UI动画与过渡效果增强
-- [ ] 单元测试与集成测试
-- [ ] 阿里云ECS部署配置
+- [ ] Claude Code操控浏览器采集岗位
+- [ ] 单元测试与集成测试覆盖
 
-### 已知问题
-- pdf-parse使用pdfjs-dist直接API（pdf-parse v1与Turbopack不兼容已解决）
-
-### 下次继续
-- 浏览器岗位采集功能
-- 补充测试覆盖
+### 部署
+- `ecosystem.config.cjs` — PM2配置（阿里云ECS）
+- `npm run build && pm2 start ecosystem.config.cjs`
