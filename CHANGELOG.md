@@ -1,0 +1,35 @@
+# CHANGELOG.md
+
+## 2026-05-02 Session (Phase 1 MVP Init)
+
+### 完成
+- [x] 项目脚手架：Next.js 16 + TypeScript + Tailwind CSS + shadcn-style UI components
+- [x] 数据库：Prisma + SQLite，6个模型（User, Resume, Job, Application, StatusLog, Setting）
+- [x] 用户认证：注册、登录、JWT签发验证、bcryptjs密码哈希
+- [x] 数据隔离：所有API Route通过auth中间件注入userId，查询强制过滤
+- [x] 简历管理：上传（PDF/Word/文本）、解析、CRUD API、列表页
+- [x] AI简历诊断：三维度评分（结构/内容/关键词）+ 修改建议，SVG仪表盘可视化
+- [x] 岗位管理：JD输入、AI解析、列表+详情页
+- [x] 简历-岗位匹配：匹配度评分 + 绿/红/黄关键词标签 + AI重写建议
+- [x] 设置页：API Key加密存储（AES-256）、模型选择、密码修改、账号删除
+- [x] LLM适配层：OpenAI兼容SDK，支持DeepSeek/Kimi/通义千问
+
+### 待完成（Phase 2）
+- [ ] 求职信生成（三种语气：正式/自信/真诚）
+- [ ] 面试准备题生成（行为/情景/专业 + STAR答案）
+- [ ] 申请追踪看板（@dnd-kit拖拽、状态流转、时间线）
+- [ ] 数据统计仪表盘（投递趋势、转化漏斗、recharts图表）
+
+### 待完成（Phase 3）
+- [ ] Claude Code操控浏览器采集岗位（Boss直聘/拉勾/智联）
+- [ ] 数据导出CSV
+- [ ] UI打磨（动画、过渡、响应式）
+- [ ] 错误处理与边界场景完善
+
+### 已知问题
+- pdf-parse使用require导入（TS模块解析与父目录冲突的临时方案）
+- 前端auth页面未强制重定向（依赖ClientLayout的isAuthenticated检查）
+
+### 下次继续
+- 从Phase 2求职信生成开始
+- 或先补充缺失的错误处理和边界场景

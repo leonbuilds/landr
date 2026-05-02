@@ -1,10 +1,22 @@
 import mammoth from "mammoth"
+import { getDocument, GlobalWorkerOptions, version } from "pdfjs-dist"
 
-const pdfParse = require("pdf-parse")
+// Use the legacy build for Node.js compatibility
+GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`
 
 export async function parsePdf(buffer: Buffer): Promise<string> {
-  const data = await pdfParse(buffer)
-  return data.text
+  const loadingTask = getDocument({ data: new Uint8Array(buffer) })
+  const pdf = await loadingTask.promise
+  const pages: string[] = []
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    const text = content.items.map((item: any) => item.str).join(" ")
+    pages.push(text)
+  }
+
+  return pages.join("\n")
 }
 
 export async function parseDocx(buffer: Buffer): Promise<string> {
