@@ -1,43 +1,46 @@
-import { getApiUrl, setApiUrl, getApiKey, setApiKey } from "../utils/storage.js"
-import { testConnection } from "../utils/api.js"
-
+// Options page script
 document.addEventListener("DOMContentLoaded", async () => {
-  const apiUrlInput = document.getElementById("api-url")
-  const apiKeyInput = document.getElementById("api-key")
-  const testResult = document.getElementById("test-result")
-  const saveResult = document.getElementById("save-result")
+  var apiUrlInput = document.getElementById("api-url")
+  var apiKeyInput = document.getElementById("api-key")
+  var testResult = document.getElementById("test-result")
+  var saveResult = document.getElementById("save-result")
 
-  // Load saved values
-  apiUrlInput.value = await getApiUrl()
-  apiKeyInput.value = await getApiKey()
+  var data = await chrome.storage.local.get(["apiUrl", "apiKey"])
+  apiUrlInput.value = data.apiUrl || "http://localhost:3000"
+  apiKeyInput.value = data.apiKey || ""
 
-  // Show/hide key
-  document.getElementById("show-key-btn").addEventListener("click", () => {
-    const type = apiKeyInput.type === "password" ? "text" : "password"
-    apiKeyInput.type = type
-    document.getElementById("show-key-btn").textContent = type === "password" ? "显示" : "隐藏"
+  document.getElementById("show-key-btn").addEventListener("click", function () {
+    var isPass = apiKeyInput.type === "password"
+    apiKeyInput.type = isPass ? "text" : "password"
+    document.getElementById("show-key-btn").textContent = isPass ? "隐藏" : "显示"
   })
 
-  // Test connection
   document.getElementById("test-btn").addEventListener("click", async () => {
     await saveSettings()
-    const result = await testConnection()
-    testResult.textContent = result.message
-    testResult.className = "result " + (result.ok ? "success" : "error")
+    var apiUrl = apiUrlInput.value.trim() || "http://localhost:3000"
+    var apiKey = apiKeyInput.value.trim()
+    if (!apiKey) { testResult.textContent = "未配置API Key"; testResult.className = "result error"; return }
+    try {
+      var res = await fetch(apiUrl + "/api/resumes", { headers: { "X-API-Key": apiKey } })
+      testResult.textContent = res.ok ? "连接成功" : "服务器返回 " + res.status
+      testResult.className = "result " + (res.ok ? "success" : "error")
+    } catch (e) {
+      testResult.textContent = "无法连接到服务器"
+      testResult.className = "result error"
+    }
   })
 
-  // Save
   document.getElementById("save-btn").addEventListener("click", async () => {
     await saveSettings()
     saveResult.textContent = "设置已保存"
     saveResult.className = "result success"
-    setTimeout(() => { saveResult.textContent = "" }, 2000)
+    setTimeout(function () { saveResult.textContent = "" }, 2000)
   })
-})
 
-async function saveSettings() {
-  const apiUrl = document.getElementById("api-url").value.trim() || "http://localhost:3000"
-  const apiKey = document.getElementById("api-key").value.trim()
-  await setApiUrl(apiUrl)
-  await setApiKey(apiKey)
-}
+  async function saveSettings() {
+    await chrome.storage.local.set({
+      apiUrl: apiUrlInput.value.trim() || "http://localhost:3000",
+      apiKey: apiKeyInput.value.trim(),
+    })
+  }
+})

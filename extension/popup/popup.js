@@ -1,15 +1,13 @@
-import { getApiUrl, getHistory, clearHistory } from "../utils/storage.js"
-import { testConnection } from "../utils/api.js"
-
+// Popup script — runs in extension popup context
 document.addEventListener("DOMContentLoaded", async () => {
-  const statusDot = document.getElementById("status-dot")
-  const statusText = document.getElementById("status-text")
-  const platformBadge = document.getElementById("platform-badge")
-  const historyList = document.getElementById("history-list")
-  const emptyHistory = document.getElementById("empty-history")
+  var statusDot = document.getElementById("status-dot")
+  var statusText = document.getElementById("status-text")
+  var platformBadge = document.getElementById("platform-badge")
+  var historyList = document.getElementById("history-list")
+  var emptyHistory = document.getElementById("empty-history")
 
   // Check connection
-  const conn = await testConnection()
+  var conn = await testConnection()
   if (conn.ok) {
     statusDot.className = "dot connected"
     statusText.textContent = "已连接"
@@ -19,10 +17,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Get current platform
-  chrome.runtime.sendMessage({ type: "GET_PLATFORM" }, (res) => {
-    if (res?.platform && res.platform !== "非招聘平台") {
+  chrome.runtime.sendMessage({ type: "GET_PLATFORM" }, function (res) {
+    if (res && res.platform && res.platform !== "非招聘平台") {
       platformBadge.textContent = "当前平台: " + res.platform
-    } else if (res?.platform === "非招聘平台") {
+    } else if (res && res.platform === "非招聘平台") {
       platformBadge.textContent = "当前页面非招聘平台"
     } else {
       platformBadge.style.display = "none"
@@ -30,44 +28,55 @@ document.addEventListener("DOMContentLoaded", async () => {
   })
 
   // Load history
-  const history = await getHistory()
+  var data = await chrome.storage.local.get(["extractionHistory"])
+  var history = data.extractionHistory || []
   if (history.length === 0) {
     emptyHistory.style.display = "block"
   } else {
     emptyHistory.style.display = "none"
-    history.slice(0, 20).forEach((item) => {
-      const div = document.createElement("div")
+    history.slice(0, 20).forEach(function (item) {
+      var div = document.createElement("div")
       div.className = "history-item"
-      div.innerHTML = `
-        <div class="info">
-          <div class="title">${escapeHtml(item.title || "无标题")}</div>
-          <div class="company">${escapeHtml(item.company || "")}</div>
-        </div>
-        <span class="badge">${escapeHtml(item.platform || "")}</span>
-      `
+      div.innerHTML =
+        '<div class="info"><div class="title">' + esc(item.title || "无标题") + '</div>' +
+        '<div class="company">' + esc(item.company || "") + '</div></div>' +
+        '<span class="badge">' + esc(item.platform || "") + '</span>'
       historyList.appendChild(div)
     })
   }
 
   // Buttons
   document.getElementById("open-app-btn").addEventListener("click", async () => {
-    const apiUrl = await getApiUrl()
-    chrome.tabs.create({ url: apiUrl })
+    var d = await chrome.storage.local.get(["apiUrl"])
+    chrome.tabs.create({ url: d.apiUrl || "http://localhost:3000" })
   })
 
   document.getElementById("clear-btn").addEventListener("click", async () => {
-    await clearHistory()
+    await chrome.storage.local.set({ extractionHistory: [] })
     historyList.innerHTML = ""
     emptyHistory.style.display = "block"
   })
 
-  document.getElementById("options-btn").addEventListener("click", () => {
+  document.getElementById("options-btn").addEventListener("click", function () {
     chrome.runtime.openOptionsPage()
   })
 })
 
-function escapeHtml(str) {
-  const div = document.createElement("div")
-  div.textContent = str
-  return div.innerHTML
+async function testConnection() {
+  var data = await chrome.storage.local.get(["apiUrl", "apiKey"])
+  var apiUrl = data.apiUrl || "http://localhost:3000"
+  var apiKey = data.apiKey || ""
+  if (!apiKey) return { ok: false, message: "未配置API Key" }
+  try {
+    var res = await fetch(apiUrl + "/api/resumes", { headers: { "X-API-Key": apiKey } })
+    return { ok: res.ok, message: res.ok ? "连接成功" : "服务器返回 " + res.status }
+  } catch (e) {
+    return { ok: false, message: "无法连接到服务器，请检查API地址" }
+  }
+}
+
+function esc(str) {
+  var d = document.createElement("div")
+  d.textContent = str
+  return d.innerHTML
 }
