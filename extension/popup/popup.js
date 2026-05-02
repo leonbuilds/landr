@@ -64,16 +64,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function testConnection() {
   var data = await chrome.storage.local.get(["apiUrl", "apiKey"])
-  var apiUrl = data.apiUrl || "http://localhost:3000"
-  var apiKey = data.apiKey || ""
-  if (!apiKey) return { ok: false, message: "未配置API Key" }
-  try {
-    var res = await fetch(apiUrl + "/api/auth/verify-api-key", { headers: { "X-API-Key": apiKey } })
-    var data = await res.json().catch(function() { return {} })
-    return { ok: data.valid, message: data.valid ? "连接成功" : (data.message || "验证失败") }
-  } catch (e) {
-    return { ok: false, message: "无法连接到服务器，请检查API地址" }
-  }
+  if (!data.apiKey) return { ok: false, message: "未配置API Key" }
+  return new Promise(function (resolve) {
+    chrome.runtime.sendMessage({ type: "TEST_CONNECTION" }, function (d) {
+      if (!d) { resolve({ ok: false, message: "无法连接到服务器" }); return }
+      resolve({ ok: d.valid, message: d.valid ? "连接成功" : (d.message || "验证失败") })
+    })
+  })
 }
 
 function esc(str) {

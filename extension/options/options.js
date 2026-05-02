@@ -28,19 +28,13 @@
 
     document.getElementById("test-btn").onclick = function () {
       doSave(function () {
-        var apiUrl = apiUrlInput.value.trim() || "http://localhost:3000"
         var apiKey = apiKeyInput.value.trim()
         if (!apiKey) { testResult.textContent = "未配置API Key"; testResult.className = "result error"; return }
-        fetch(apiUrl + "/api/auth/verify-api-key", { headers: { "X-API-Key": apiKey } })
-          .then(function (r) { return r.json() })
-          .then(function (d) {
-            testResult.textContent = d.valid ? "连接成功" : (d.message || "无效")
-            testResult.className = "result " + (d.valid ? "success" : "error")
-          })
-          .catch(function () {
-            testResult.textContent = "无法连接服务器"
-            testResult.className = "result error"
-          })
+        chrome.runtime.sendMessage({ type: "TEST_CONNECTION" }, function (d) {
+          if (!d) { testResult.textContent = "无法连接服务器"; testResult.className = "result error"; return }
+          testResult.textContent = d.valid ? "连接成功" : (d.message || "无效")
+          testResult.className = "result " + (d.valid ? "success" : "error")
+        })
       })
     }
 
