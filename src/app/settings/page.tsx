@@ -206,6 +206,27 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Data Export */}
+      <Card>
+        <CardHeader>
+          <CardTitle>数据导出</CardTitle>
+          <CardDescription>导出所有申请记录为CSV文件</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={async () => {
+            const h = getHeaders()
+            const res = await fetch('/api/applications/export', { headers: h })
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url; a.download = `applications-${new Date().toISOString().slice(0,10)}.csv`
+            a.click(); URL.revokeObjectURL(url)
+          }}>
+            导出申请记录 (CSV)
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Password Change */}
       <Card>
         <CardHeader>
