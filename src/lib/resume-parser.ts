@@ -1,11 +1,6 @@
 import mammoth from "mammoth"
 import { getDocument, GlobalWorkerOptions, version } from "pdfjs-dist"
 
-interface TextItem {
-  str: string
-}
-
-// Use the legacy build for Node.js compatibility
 GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`
 
 export async function parsePdf(buffer: Buffer): Promise<string> {
@@ -16,7 +11,9 @@ export async function parsePdf(buffer: Buffer): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    const text = content.items.map((item: TextItem) => item.str).join(" ")
+    const text = content.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ")
     pages.push(text)
   }
 
@@ -67,7 +64,6 @@ export function structureResumeText(rawText: string): StructuredResume {
     skills: [],
   }
 
-  // Simple heuristic-based structuring
   let currentSection = ""
 
   for (const line of lines) {
@@ -120,7 +116,6 @@ export function structureResumeText(rawText: string): StructuredResume {
         result.skills.push(line.trim())
         break
       default:
-        // Auto-detect section by content
         if (line.includes("@") || line.includes("电话") || line.includes("手机")) {
           result.basics.summary = (result.basics.summary || "") + " " + line.trim()
         }

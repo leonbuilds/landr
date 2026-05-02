@@ -8,21 +8,22 @@ import { ResumeUpload } from "@/components/resumes/resume-upload"
 import { DiagnosisCard } from "@/components/resumes/diagnosis-card"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
 import { FileText, Plus, Trash2 } from "lucide-react"
+import type { Resume, DiagnosisResult } from "@/types"
 
 export default function ResumesPage() {
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
-  const [resumes, setResumes] = useState<Record<string, unknown>[]>([])
+  const [resumes, setResumes] = useState<Resume[]>([])
   const [loading, setLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
   const [diagnosing, setDiagnosing] = useState<number | null>(null)
-  const [diagnosis, setDiagnosis] = useState<Record<string, unknown> | null>(null)
+  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null)
   const [selectedResume, setSelectedResume] = useState<number | null>(null)
 
   const fetchResumes = useCallback(async () => {
     const headers = getHeaders()
     const res = await fetch("/api/resumes", { headers })
     if (res.ok) {
-      const json = await res.json()
+      const json = (await res.json()) as { data: Resume[] }
       setResumes(json.data)
     }
     setLoading(false)
@@ -47,7 +48,7 @@ export default function ResumesPage() {
       const res = await fetch(`/api/resumes/${id}/diagnose`, { method: "POST", headers })
       const json = await res.json()
       if (json.data) {
-        setDiagnosis(json.data)
+        setDiagnosis(json.data as DiagnosisResult)
         setSelectedResume(id)
       } else {
         alert(json.error?.message || "诊断失败")

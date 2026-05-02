@@ -103,3 +103,11 @@ export interface ApiResponse<T> {
   data?: T
   error?: { code: string; message: string }
 }
+
+export interface ApplicationStats {
+  total: number
+  statusCounts: Record<string, number>
+  dailyCounts: { date: string; count: number }[]
+  pipeline: { stage: string; count: number }[]
+  avgMatchScore: number
+}

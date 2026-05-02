@@ -7,10 +7,11 @@ import { JobCard } from "@/components/jobs/job-card"
 import { JobInput } from "@/components/jobs/job-input"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
 import { Plus, Briefcase } from "lucide-react"
+import type { Job } from "@/types"
 
 export default function JobsPage() {
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
-  const [jobs, setJobs] = useState<Record<string, unknown>[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [showInput, setShowInput] = useState(false)
 
@@ -18,7 +19,7 @@ export default function JobsPage() {
     const headers = getHeaders()
     const res = await fetch("/api/jobs", { headers })
     if (res.ok) {
-      const json = await res.json()
+      const json = (await res.json()) as { data: Job[] }
       setJobs(json.data)
     }
     setLoading(false)

@@ -7,13 +7,13 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import type { Application } from "@/types"
+import type { Application, ApplicationStats } from "@/types"
 
 export default function BoardPage() {
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<Record<string, unknown> | null>(null)
+  const [stats, setStats] = useState<ApplicationStats | null>(null)
   const [tab, setTab] = useState("board")
 
   const fetchData = useCallback(async () => {
@@ -23,7 +23,7 @@ export default function BoardPage() {
       fetch("/api/applications/stats", { headers }),
     ])
     if (appsRes.ok) setApplications((await appsRes.json()).data)
-    if (statsRes.ok) setStats((await statsRes.json()).data)
+    if (statsRes.ok) setStats((await statsRes.json()).data as ApplicationStats)
     setLoading(false)
   }, [getHeaders])
 
