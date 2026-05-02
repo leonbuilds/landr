@@ -37,6 +37,9 @@
       "128": "icons/icon128.png"
     }
   },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; connect-src http://localhost:* http://127.0.0.1:*;"
+  },
   "web_accessible_resources": [
     { "resources": ["utils/*"], "matches": ["<all_urls>"] }
   ],
