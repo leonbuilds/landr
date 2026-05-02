@@ -1,23 +1,22 @@
 import mammoth from "mammoth"
-import { getDocument, GlobalWorkerOptions, version } from "pdfjs-dist"
-
-GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`
+import PdfParser from "pdf2json"
 
 export async function parsePdf(buffer: Buffer): Promise<string> {
-  const loadingTask = getDocument({ data: new Uint8Array(buffer) })
-  const pdf = await loadingTask.promise
-  const pages: string[] = []
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i)
-    const content = await page.getTextContent()
-    const text = content.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .join(" ")
-    pages.push(text)
-  }
-
-  return pages.join("\n")
+  return new Promise((resolve, reject) => {
+    const parser = new PdfParser()
+    parser.on("pdfParser_dataReady", (data: { Pages: { Texts: { R: { T: string }[] }[] }[] }) => {
+      const texts: string[] = []
+      for (const page of data.Pages) {
+        for (const text of page.Texts) {
+          const line = text.R.map((r) => decodeURIComponent(r.T)).join(" ")
+          texts.push(line)
+        }
+      }
+      resolve(texts.join("\n"))
+    })
+    parser.on("pdfParser_dataError", reject)
+    parser.parseBuffer(buffer)
+  })
 }
 
 export async function parseDocx(buffer: Buffer): Promise<string> {
