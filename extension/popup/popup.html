@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI求职Agent</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <span class="logo">AI求职Agent</span>
+    <button id="options-btn" class="icon-btn" title="设置">&#9881;</button>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    <span class="dot" id="status-dot"></span>
+    <span id="status-text">检查连接中...</span>
+  </div>
+
+  <div class="platform-badge" id="platform-badge"></div>
+
+  <div class="section">
+    <h3>最近采集</h3>
+    <div id="history-list" class="history-list"></div>
+    <div id="empty-history" class="empty">暂无采集记录</div>
+  </div>
+
+  <div class="actions">
+    <button id="open-app-btn" class="primary-btn">打开AI求职Agent</button>
+    <button id="clear-btn" class="secondary-btn">清空记录</button>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

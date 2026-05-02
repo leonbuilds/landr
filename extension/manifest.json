@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "AI求职Agent - 岗位采集",
+  "version": "1.0",
+  "description": "一键采集Boss直聘、LinkedIn、拉勾、智联、小红书的岗位信息到AI求职Agent",
+  "permissions": ["storage", "activeTab", "tabs"],
+  "host_permissions": [
+    "*://*.zhipin.com/*",
+    "*://*.linkedin.com/*",
+    "*://*.lagou.com/*",
+    "*://*.zhaopin.com/*",
+    "*://*.xiaohongshu.com/*",
+    "http://localhost:3000/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.zhipin.com/*",
+        "*://*.linkedin.com/*",
+        "*://*.lagou.com/*",
+        "*://*.zhaopin.com/*",
+        "*://*.xiaohongshu.com/*"
+      ],
+      "js": ["content/shared.js", "content/extractors/boss.js", "content/extractors/linkedin.js", "content/extractors/lagou.js", "content/extractors/zhilian.js", "content/extractors/xiaohongshu.js", "content/ui.js", "content/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "AI求职Agent",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "options/options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

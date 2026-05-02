@@ -104,6 +104,20 @@ export interface ApiResponse<T> {
   error?: { code: string; message: string }
 }
 
+export interface ImportJobInput {
+  title: string
+  company?: string
+  location?: string
+  salaryRange?: string
+  jdText?: string
+  url?: string
+  platform?: string
+}
+
+export interface ImportJobsRequest {
+  jobs: ImportJobInput[]
+}
+
 export interface ApplicationStats {
   total: number
   statusCounts: Record<string, number>
