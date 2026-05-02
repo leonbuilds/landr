@@ -32,9 +32,11 @@
 - [x] 所有页面完整错误处理（401/403/404/500状态覆盖）
 - [x] API Key加密存储、数据脱敏显示
 
-### 待完成（后续迭代）
-- [ ] Claude Code操控浏览器采集岗位
-- [ ] 单元测试与集成测试覆盖
+### 完成
+- [x] 单元测试：18 tests pass (auth, crypto, ai) via vitest
+- [x] 浏览器岗位采集API（支持URL抓取 + 页面内容直接解析）
+- [x] jest → vitest迁移（Node v23兼容）
+- [x] `/api/jobs/scrape` 端点：提交招聘页面URL或HTML内容，AI自动提取岗位并存入岗位库
 
 ### 部署
 - `ecosystem.config.cjs` — PM2配置（阿里云ECS）
