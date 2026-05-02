@@ -21,12 +21,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     var apiKey = apiKeyInput.value.trim()
     if (!apiKey) { testResult.textContent = "未配置API Key"; testResult.className = "result error"; return }
     try {
-      var res = await fetch(apiUrl + "/api/resumes", { headers: { "X-API-Key": apiKey } })
-      testResult.textContent = res.ok ? "连接成功" : "服务器返回 " + res.status
-      testResult.className = "result " + (res.ok ? "success" : "error")
-    } catch (e) {
-      testResult.textContent = "无法连接到服务器"
-      testResult.className = "result error"
+      var res = await fetch(apiUrl + "/api/auth/verify-api-key", { headers: { "X-API-Key": apiKey } })
+      var data = await res.json()
+      testResult.textContent = data.valid ? "连接成功" : (data.message || "API Key无效")
+      testResult.className = "result " + (data.valid ? "success" : "error")
     }
   })
 

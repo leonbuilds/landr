@@ -68,8 +68,9 @@ async function testConnection() {
   var apiKey = data.apiKey || ""
   if (!apiKey) return { ok: false, message: "未配置API Key" }
   try {
-    var res = await fetch(apiUrl + "/api/resumes", { headers: { "X-API-Key": apiKey } })
-    return { ok: res.ok, message: res.ok ? "连接成功" : "服务器返回 " + res.status }
+    var res = await fetch(apiUrl + "/api/auth/verify-api-key", { headers: { "X-API-Key": apiKey } })
+    var data = await res.json().catch(function() { return {} })
+    return { ok: data.valid, message: data.valid ? "连接成功" : (data.message || "验证失败") }
   } catch (e) {
     return { ok: false, message: "无法连接到服务器，请检查API地址" }
   }
