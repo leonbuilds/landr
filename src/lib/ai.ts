@@ -88,6 +88,44 @@ export const MATCH_PROMPT = `你是一位求职匹配专家。请对比以下简
   "analysis": "综合分析说明，1-2句话"
 }`
 
+export const COVER_LETTER_PROMPT = `你是一位专业求职顾问。请根据以下简历和目标岗位JD，生成一封定制化求职信（cover letter）。使用指定的语气风格。返回纯JSON格式（不要markdown代码块）。
+
+简历：
+{{RESUME}}
+
+岗位JD：
+{{JD}}
+
+语气：{{TONE}}（formal=正式专业 / confident=自信积极 / sincere=真诚务实）
+
+返回格式：
+{
+  "subject": "求职信主题",
+  "body": "求职信正文，包含称呼、开头、主体、结尾、落款",
+  "tone": "使用的语气"
+}`
+
+export const INTERVIEW_PREP_PROMPT = `你是一位资深面试官。请根据以下简历和目标岗位JD，生成面试准备题目。题目应包含行为题、情景题和技术/专业题。每题附带STAR格式的参考回答要点。返回纯JSON格式（不要markdown代码块）。
+
+简历：
+{{RESUME}}
+
+岗位JD：
+{{JD}}
+
+返回格式：
+{
+  "behavioral": [
+    { "question": "行为面试题", "starAnswer": { "situation": "", "task": "", "action": "", "result": "" } }
+  ],
+  "situational": [
+    { "question": "情景面试题", "starAnswer": { "situation": "", "task": "", "action": "", "result": "" } }
+  ],
+  "technical": [
+    { "question": "技术/专业面试题", "starAnswer": { "situation": "", "task": "", "action": "", "result": "" } }
+  ]
+}`
+
 export const REWRITE_PROMPT = `你是一位专业简历写手。请根据以下匹配分析结果，重写简历中的关键经历要点，使其更匹配目标岗位。返回纯JSON格式（不要markdown代码块）。
 
 匹配分析：
