@@ -17,7 +17,9 @@
   var btn = createFloatingButton()
 
   if (isDetail) {
-    btn.addEventListener("click", async function () {
+    btn.addEventListener("click", async function (e) {
+      e.preventDefault()
+      e.stopPropagation()
       setButtonLoading(true)
       try {
         var job = extractor.extractDetail()
@@ -43,7 +45,9 @@
       }
     })
 
-    btn.addEventListener("click", async function () {
+    btn.addEventListener("click", async function (e) {
+      e.preventDefault()
+      e.stopPropagation()
       var selected = getSelectedItems()
       if (selected.length === 0) { showToast("请先勾选要采集的岗位", "error"); return }
 
