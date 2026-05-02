@@ -6,16 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import { Building2, Calendar } from "lucide-react"
 import type { Application } from "@/types"
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "待投递",
-  applied: "已投递",
-  written_test: "笔试中",
-  interview: "面试中",
-  offer: "Offer",
-  rejected: "已拒绝",
-  withdrawn: "已放弃",
-}
-
 interface ApplicationCardProps {
   application: Application
   onClick: () => void

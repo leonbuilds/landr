@@ -10,7 +10,7 @@ import { Plus, Briefcase } from "lucide-react"
 
 export default function JobsPage() {
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
-  const [jobs, setJobs] = useState<any[]>([])
+  const [jobs, setJobs] = useState<Record<string, unknown>[]>([])
   const [loading, setLoading] = useState(true)
   const [showInput, setShowInput] = useState(false)
 

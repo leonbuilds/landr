@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -31,10 +31,9 @@ interface KanbanBoardProps {
   applications: Application[]
   onStatusChange: (appId: number, newStatus: string) => void
   onCardClick: (app: Application) => void
-  getHeaders: () => Record<string, string>
 }
 
-export function KanbanBoard({ applications, onStatusChange, onCardClick, getHeaders }: KanbanBoardProps) {
+export function KanbanBoard({ applications, onStatusChange, onCardClick }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
 
   const sensors = useSensors(

@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ data: { jobs: created, count: created.length } })
-      } catch (e) {
+      } catch {
         return NextResponse.json({
           error: { code: "SCRAPE_FAILED", message: "页面抓取失败，请检查URL或直接粘贴页面内容" }
         }, { status: 422 })
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       const apiKey = decrypt(apiKeyEncrypted)
       const prompt = SCRAPE_PROMPT.replace("{{CONTENT}}", text)
       const response = await callLLM(prompt, apiKey, modelKey)
-      const result = parseJsonFromLLM<{ jobs: any[] }>(response)
+      const result = parseJsonFromLLM<{ jobs: Array<{ title: string; company: string; location: string; salaryRange: string; jdText: string }> }>(response)
 
       const created = []
       for (const j of result.jobs) {
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: { code: "BAD_REQUEST", message: "请提供URL或页面内容" } }, { status: 400 })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: { code: "SERVER_ERROR", message: "服务器错误" } }, { status: 500 })
   }
 }

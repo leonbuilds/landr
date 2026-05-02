@@ -25,6 +25,7 @@ export function useAuth() {
     isLoading: true,
   })
 
+   
   useEffect(() => {
     const token = localStorage.getItem("token")
     const userStr = localStorage.getItem("user")

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
 import { Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react"
@@ -49,6 +48,7 @@ export default function SettingsPage() {
     setLoading(false)
   }, [getHeaders])
 
+   
   useEffect(() => {
     if (!authLoading && isAuthenticated) fetchSettings()
   }, [authLoading, isAuthenticated, fetchSettings])

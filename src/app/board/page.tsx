@@ -13,7 +13,7 @@ export default function BoardPage() {
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<Record<string, unknown> | null>(null)
   const [tab, setTab] = useState("board")
 
   const fetchData = useCallback(async () => {
@@ -27,6 +27,7 @@ export default function BoardPage() {
     setLoading(false)
   }, [getHeaders])
 
+   
   useEffect(() => {
     if (!authLoading && isAuthenticated) fetchData()
   }, [authLoading, isAuthenticated, fetchData])
@@ -50,13 +51,14 @@ export default function BoardPage() {
     const headers = getHeaders()
     const res = await fetch(`/api/applications/${app.id}`, { headers })
     if (res.ok) {
-      const json = await res.json()
-      // Show application detail - expand inline for now
+      const detail = (await res.json()).data as Record<string, unknown>
+      const job = detail.job as Record<string, unknown> | undefined
+      const statusLogs = detail.statusLogs as unknown[] | undefined
       alert(
-        `岗位: ${json.data.job?.title || "-"}\n公司: ${json.data.job?.company || "-"}\n` +
-        `匹配度: ${json.data.matchScore || "-"}分\n状态: ${json.data.status}\n` +
-        `备注: ${json.data.notes || "无"}\n` +
-        `状态变更次数: ${json.data.statusLogs?.length || 0}`
+        `岗位: ${job?.title || "-"}\n公司: ${job?.company || "-"}\n` +
+        `匹配度: ${detail.matchScore || "-"}分\n状态: ${detail.status}\n` +
+        `备注: ${detail.notes || "无"}\n` +
+        `状态变更次数: ${statusLogs?.length || 0}`
       )
     }
   }
@@ -81,7 +83,6 @@ export default function BoardPage() {
           applications={applications}
           onStatusChange={handleStatusChange}
           onCardClick={handleCardClick}
-          getHeaders={getHeaders}
         />
       )}
 
@@ -114,7 +115,7 @@ export default function BoardPage() {
             <CardContent className="p-4">
               <h3 className="font-semibold mb-4">转化漏斗</h3>
               <div className="space-y-3">
-                {stats.pipeline.map((stage: any, i: number) => (
+                {stats.pipeline.map((stage: { stage: string; count: number }, i: number) => (
                   <div key={i} className="flex items-center gap-3">
                     <span className="text-sm text-gray-600 w-16">{stage.stage}</span>
                     <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">

@@ -4,21 +4,19 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ResumeUpload } from "@/components/resumes/resume-upload"
 import { DiagnosisCard } from "@/components/resumes/diagnosis-card"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
 import { FileText, Plus, Trash2 } from "lucide-react"
-import Link from "next/link"
 
 export default function ResumesPage() {
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
-  const [resumes, setResumes] = useState<any[]>([])
+  const [resumes, setResumes] = useState<Record<string, unknown>[]>([])
   const [loading, setLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
   const [diagnosing, setDiagnosing] = useState<number | null>(null)
-  const [diagnosis, setDiagnosis] = useState<any>(null)
-  const [selectedResume, setSelectedResume] = useState<any>(null)
+  const [diagnosis, setDiagnosis] = useState<Record<string, unknown> | null>(null)
+  const [selectedResume, setSelectedResume] = useState<number | null>(null)
 
   const fetchResumes = useCallback(async () => {
     const headers = getHeaders()
@@ -30,6 +28,7 @@ export default function ResumesPage() {
     setLoading(false)
   }, [getHeaders])
 
+   
   useEffect(() => {
     if (!authLoading && isAuthenticated) fetchResumes()
   }, [authLoading, isAuthenticated, fetchResumes])
@@ -93,7 +92,7 @@ export default function ResumesPage() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {resumes.map((resume: any) => (
+          {resumes.map((resume) => (
             <Card key={resume.id} className="hover:shadow-md transition-shadow">
               <CardContent className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-4">

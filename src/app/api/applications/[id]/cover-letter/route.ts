@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
 
     return NextResponse.json({ data: result })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: { code: "LLM_ERROR", message: "AI服务暂时不可用" } }, { status: 502 })
   }
 }

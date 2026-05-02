@@ -15,13 +15,13 @@ import Link from "next/link"
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
-  const [job, setJob] = useState<any>(null)
-  const [resumes, setResumes] = useState<any[]>([])
+  const [job, setJob] = useState<Record<string, unknown> | null>(null)
+  const [resumes, setResumes] = useState<Record<string, unknown>[]>([])
   const [selectedResume, setSelectedResume] = useState("")
   const [matching, setMatching] = useState(false)
-  const [matchResult, setMatchResult] = useState<any>(null)
-  const [coverLetter, setCoverLetter] = useState<any>(null)
-  const [interviewPrep, setInterviewPrep] = useState<any>(null)
+  const [matchResult, setMatchResult] = useState<Record<string, unknown> | null>(null)
+  const [coverLetter, setCoverLetter] = useState<Record<string, unknown> | null>(null)
+  const [interviewPrep, setInterviewPrep] = useState<Record<string, unknown> | null>(null)
   const [genCoverLetter, setGenCoverLetter] = useState(false)
   const [genInterview, setGenInterview] = useState(false)
   const [coverTone, setCoverTone] = useState("formal")
@@ -68,7 +68,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   if (authLoading || loading) return <LoadingSpinner message="加载中..." />
   if (!isAuthenticated || !job) return null
 
-  const parsed = job.parsedJson ? JSON.parse(job.parsedJson) : null
+  const parsed = job.parsedJson ? JSON.parse(job.parsedJson as string) as Record<string, unknown> : null
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -127,8 +127,8 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   <SelectValue placeholder="选择一份简历进行匹配..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {resumes.map((r: any) => (
-                    <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
+                  {resumes.map((r) => (
+                    <SelectItem key={String(r.id)} value={String(r.id)}>{String(r.name)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -227,7 +227,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   )
 }
 
-function InterviewSection({ title, items }: { title: string; items: any[] }) {
+function InterviewSection({ title, items }: { title: string; items: { question: string; starAnswer: Record<string, string> }[] }) {
   const [expanded, setExpanded] = useState<number | null>(null)
 
   if (!items?.length) return null
