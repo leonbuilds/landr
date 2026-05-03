@@ -4,22 +4,27 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-[13px] font-semibold tracking-tight transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mesh-lavender)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700",
-        destructive: "bg-red-500 text-white hover:bg-red-600",
-        outline: "border border-gray-200 bg-white hover:bg-gray-100 hover:text-gray-900",
-        secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200",
-        ghost: "hover:bg-gray-100 hover:text-gray-900",
-        link: "text-blue-600 underline-offset-4 hover:underline",
+        default:
+          "text-white shadow-[0_4px_16px_-2px_rgba(167,139,250,0.45),0_0_0_1px_rgba(255,255,255,0.3)_inset] hover:shadow-[0_6px_20px_-2px_rgba(167,139,250,0.55),0_0_0_1px_rgba(255,255,255,0.35)_inset] hover:translate-y-[-1px] [background:linear-gradient(135deg,var(--mesh-lavender),var(--mesh-sky))]",
+        destructive:
+          "text-white [background:linear-gradient(135deg,var(--mesh-pink),var(--lo))] shadow-[0_4px_16px_-2px_rgba(255,107,157,0.4)] hover:translate-y-[-1px]",
+        outline:
+          "glass text-[var(--text)] hover:[background:var(--bg-elevated-strong)] hover:translate-y-[-1px] hover:shadow-[0_4px_12px_-2px_rgba(15,15,20,0.08)]",
+        secondary:
+          "[background:rgba(15,15,20,0.04)] text-[var(--text)] border border-transparent hover:[background:rgba(15,15,20,0.06)]",
+        ghost:
+          "text-[var(--text-soft)] hover:[background:rgba(255,255,255,0.5)] hover:backdrop-blur-md",
+        link: "text-[var(--mesh-lavender)] underline-offset-4 hover:underline font-medium",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        sm: "h-8 rounded-[8px] px-3 text-[12px]",
+        lg: "h-11 rounded-[12px] px-6 text-[14px]",
+        icon: "h-9 w-9",
       },
     },
     defaultVariants: {

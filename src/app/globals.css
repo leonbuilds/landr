@@ -1,26 +1,139 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --bg-base: #F4F2F0;
+  --bg-elevated: rgba(255, 255, 255, 0.62);
+  --bg-elevated-strong: rgba(255, 255, 255, 0.82);
+  --bg-input: rgba(255, 255, 255, 0.55);
+
+  /* Text */
+  --text: #0F0F14;
+  --text-soft: #2A2A33;
+  --muted: #6B6B73;
+  --dim: #A8A8AF;
+
+  /* Lines */
+  --line: rgba(15, 15, 20, 0.06);
+  --line-hi: rgba(15, 15, 20, 0.1);
+  --glass-edge: rgba(255, 255, 255, 0.6);
+  --glass-edge-strong: rgba(255, 255, 255, 0.85);
+
+  /* Brand mesh (logo / hero gradients) */
+  --mesh-pink: #FF6B9D;
+  --mesh-lavender: #A78BFA;
+  --mesh-sky: #60A5FA;
+  --mesh-mint: #34D399;
+  --mesh-amber: #FBBF24;
+
+  /* Semantic */
+  --hi: #10B981;
+  --hi-soft: rgba(16, 185, 129, 0.12);
+  --med: #F59E0B;
+  --med-soft: rgba(245, 158, 11, 0.12);
+  --lo: #EF4444;
+  --lo-soft: rgba(239, 68, 68, 0.12);
+
+  /* Shadows */
+  --shadow-glass: 0 4px 16px -4px rgba(15, 15, 20, 0.06),
+                  0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+  --shadow-glass-hi: 0 12px 32px -4px rgba(15, 15, 20, 0.1),
+                     0 0 0 1px rgba(255, 255, 255, 0.55) inset;
+  --shadow-pop: 0 8px 32px -4px rgba(15, 15, 20, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+
+  /* Tailwind v4 theme bridge */
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  min-height: 100%;
+  background: var(--bg-base);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-geist-sans), -apple-system, "PingFang SC", system-ui, sans-serif;
+  letter-spacing: -0.005em;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-image:
+    radial-gradient(ellipse 700px 500px at 0% 0%, rgba(255, 107, 157, 0.20), transparent 50%),
+    radial-gradient(ellipse 800px 600px at 100% 0%, rgba(167, 139, 250, 0.20), transparent 50%),
+    radial-gradient(ellipse 600px 400px at 50% 100%, rgba(96, 165, 250, 0.18), transparent 50%),
+    radial-gradient(ellipse 500px 350px at 100% 60%, rgba(52, 211, 153, 0.14), transparent 50%);
+  background-attachment: fixed;
+  position: relative;
 }
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* Text selection */
+::selection {
+  background: rgba(167, 139, 250, 0.3);
+  color: var(--text);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(15, 15, 20, 0.1); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(15, 15, 20, 0.18); background-clip: padding-box; }
+
+@layer utilities {
+  .glass {
+    background: var(--bg-elevated);
+    backdrop-filter: blur(30px) saturate(1.4);
+    -webkit-backdrop-filter: blur(30px) saturate(1.4);
+    border: 1px solid var(--glass-edge);
+  }
+
+  .glass-strong {
+    background: var(--bg-elevated-strong);
+    backdrop-filter: blur(40px) saturate(1.4);
+    -webkit-backdrop-filter: blur(40px) saturate(1.4);
+    border: 1px solid var(--glass-edge-strong);
+  }
+
+  .glass-card {
+    background: var(--bg-elevated-strong);
+    backdrop-filter: blur(30px) saturate(1.4);
+    -webkit-backdrop-filter: blur(30px) saturate(1.4);
+    border: 1px solid var(--glass-edge);
+    border-radius: 16px;
+    box-shadow: var(--shadow-glass);
+    position: relative;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--mesh-lavender), var(--mesh-pink) 50%, var(--mesh-amber));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+  }
+
+  .ring-mesh {
+    box-shadow: 0 6px 20px -4px rgba(167, 139, 250, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+  }
+}
+
+input, textarea, select { font-family: inherit; letter-spacing: inherit; }
+input::placeholder, textarea::placeholder { color: var(--dim); }
