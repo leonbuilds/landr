@@ -41,3 +41,18 @@
 ### 部署
 - `ecosystem.config.cjs` — PM2配置（阿里云ECS）
 - `npm run build && pm2 start ecosystem.config.cjs`
+
+## 2026-05-03 Session (Bugfix: 简历上传 500)
+
+### 修复
+- [x] **`/api/resumes` 上传 PDF/DOCX 抛 500 "服务器错误"** —— 根因 1：`mammoth` 在 `resume-parser.ts` 顶层 import 但未列入 `package.json`，DOCX 上传必崩；根因 2：`pdf2json` 解析失败时整个路由抛通用 500，无法区分"文件损坏"与"代码错误"。
+  - `npm i mammoth` 把缺失依赖补回
+  - PDF 解析加 15s 超时 + URI 解码容错 + 显式 `clearTimeout`
+  - 路由层把解析异常单独 catch → 422 + 友好提示 "无法解析该文件（PDF/DOCX），建议改为粘贴纯文本或导出为 TXT 后重试"
+  - 新增 `.txt` 直读支持
+- [x] E2E 验证（API 层 happy path）：注册 → 登录 → PDF 上传 → AI 诊断（DeepSeek 8s）→ 创建岗位 → 简历-岗位匹配 → 求职信生成 → 面试题生成 → 状态变更（draft→applied，statusLog 自动写入）→ 统计（counts 正确）→ CSV 导出 全通
+
+### 验证
+- `npm test` → 18/18 ✓
+- `npm run lint` → clean
+- `npm run build` → ✓ Compiled successfully (26 routes)
