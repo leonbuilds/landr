@@ -80,35 +80,82 @@ async function extractFromTab(tabId, retries = 3) {
   return []
 }
 
+// 等用户登录或反爬验证：每 3s 探一次，最长 90s
+// 探活策略：列表页有 .job-card 类元素 → 视为已就绪
+async function waitForBossReady(tabId, base, apiKey, taskId, maxSec = 90) {
+  for (let elapsed = 0; elapsed < maxSec; elapsed += 3) {
+    const probe = await new Promise((resolve) => {
+      chrome.tabs.sendMessage(tabId, { type: "BOSS_PROBE" }, (r) => {
+        if (chrome.runtime.lastError) resolve({ error: chrome.runtime.lastError.message })
+        else resolve(r || {})
+      })
+    })
+    if (probe.ready) return true
+    // 心跳：让用户和 stale sweep 都看到任务还在 running
+    if (elapsed % 30 === 0) {
+      await patchTask(base, apiKey, taskId, {
+        status: "running",
+        message: probe.needLogin
+          ? "请在打开的 Boss 标签页中完成登录/验证，扩展会自动继续"
+          : "等待 Boss 页面就绪…",
+      })
+    }
+    await new Promise((r) => setTimeout(r, 3000))
+  }
+  return false
+}
+
 async function runSearchTask(task, base, apiKey) {
-  // 后端 GET /pending 已经原子翻转到 running。这里再 PATCH 一次只是心跳作用（更新 updatedAt）
-  await patchTask(base, apiKey, task.id, { status: "running" })
+  await patchTask(base, apiKey, task.id, { status: "running", message: "正在打开 Boss 第 1 页…" })
   const allJobs = []
   let lastErr = null
 
   for (let i = 0; i < task.urls.length; i++) {
     const url = task.urls[i]
+    const isFirst = i === 0
     let tabId = null
     try {
-      const tab = await chrome.tabs.create({ url, active: false })
+      // 第一页前台打开，给用户机会看见 / 登录 / 过验证
+      // 后续页后台静默打开（cookies 已经在第一页设置）
+      const tab = await chrome.tabs.create({ url, active: isFirst })
       tabId = tab.id
-      await waitForTabComplete(tabId, 20000)
-      // Boss SPA hydrate
-      await new Promise((r) => setTimeout(r, 3000))
-      const jobs = await extractFromTab(tabId)
+      await waitForTabComplete(tabId, 25000)
+
+      // 第一页给充足时间登录（最长 90s 探活）；后续页只需 3s hydrate
+      if (isFirst) {
+        const ready = await waitForBossReady(tabId, base, apiKey, task.id, 90)
+        if (!ready) {
+          lastErr = "首页等待超时（90s）— 请确认已登录 Boss直聘，或刷新一次页面"
+          break
+        }
+      } else {
+        await new Promise((r) => setTimeout(r, 3000))
+      }
+
+      const jobs = await extractFromTab(tabId, isFirst ? 5 : 3)
       for (const j of jobs) allJobs.push(j)
+
+      // 第一页完全失败 → 直接停止（避免继续开 N 个登录页）
+      if (isFirst && jobs.length === 0) {
+        lastErr = "首页未采到岗位 — 可能登录失败或 Boss 暂时反爬，请稍后重试"
+        break
+      }
     } catch (e) {
       lastErr = e.message
+      if (isFirst) break
     } finally {
       if (tabId) try { await chrome.tabs.remove(tabId) } catch {}
     }
-    // 每页完成后心跳一次，bump updatedAt 避免被服务端 3min stale 误杀
+    // 每页完成后心跳，bump updatedAt 避免被 3min stale 误杀
     if (i < task.urls.length - 1) {
-      await patchTask(base, apiKey, task.id, { status: "running", message: `已采 ${i + 1}/${task.urls.length} 页` })
+      await patchTask(base, apiKey, task.id, {
+        status: "running",
+        message: `已采 ${i + 1}/${task.urls.length} 页（${allJobs.length} 个）`,
+      })
     }
   }
 
-  // dedup by url within this batch (server also dedups against existing)
+  // dedup by url（服务端再去重一次跟历史比对）
   const seen = new Set()
   const dedup = []
   for (const j of allJobs) {
@@ -118,7 +165,9 @@ async function runSearchTask(task, base, apiKey) {
   }
 
   const status = dedup.length === 0 ? "failed" : "done"
-  const message = dedup.length === 0 ? (lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）") : `共提取 ${dedup.length} 个岗位`
+  const message = dedup.length === 0
+    ? (lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）")
+    : `共提取 ${dedup.length} 个岗位${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
   await patchTask(base, apiKey, task.id, { status, jobs: dedup, message })
 }
 
