@@ -18,6 +18,11 @@ export interface Resume {
   updatedAt: Date
 }
 
+export interface JdFetchTaskSummary {
+  status: "pending" | "running" | "done" | "failed"
+  error?: string | null
+}
+
 export interface Job {
   id: number
   userId: number
@@ -30,6 +35,7 @@ export interface Job {
   location?: string | null
   url?: string | null
   createdAt: Date
+  jdFetchTask?: JdFetchTaskSummary | null
 }
 
 export interface Application {
