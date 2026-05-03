@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MatchVisual } from "@/components/jobs/match-visual"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
-import { ChevronDown, ChevronUp, ArrowLeft } from "lucide-react"
+import { ChevronDown, ChevronUp, ArrowLeft, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import type { Job, Resume } from "@/types"
 
@@ -101,12 +101,27 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
       <Card>
         <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <CardTitle className="text-xl">{job.title}</CardTitle>
               {job.company && <p className="text-gray-500 mt-1">{job.company}</p>}
             </div>
-            <Badge variant="outline">{job.platform === "manual" ? "手动添加" : job.platform}</Badge>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {job.url && (
+                <Button asChild variant="outline" size="sm">
+                  <a
+                    href={job.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={job.url}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    打开{job.platform === "boss" ? " Boss" : ""}原页
+                  </a>
+                </Button>
+              )}
+              <Badge variant="outline">{job.platform === "manual" ? "手动添加" : job.platform}</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
