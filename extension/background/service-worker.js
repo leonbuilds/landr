@@ -1,4 +1,122 @@
 // Background service worker — handles API requests to bypass page CSP
+// 增量功能：定时轮询 search-tasks/pending → 借用户登录态自动跑 Boss 搜索 → 上传结果
+
+// ---------- 自主搜岗位任务轮询（v2 新增） ----------
+const POLL_ALARM = "aija-search-poll"
+let isRunningTask = false
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.alarms.create(POLL_ALARM, { periodInMinutes: 0.5 })
+})
+chrome.runtime.onStartup.addListener(() => {
+  chrome.alarms.create(POLL_ALARM, { periodInMinutes: 0.5 })
+})
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === POLL_ALARM) pollSearchTasksOnce()
+})
+
+async function pollSearchTasksOnce() {
+  if (isRunningTask) return
+  const { apiUrl, apiKey } = await chrome.storage.local.get(["apiUrl", "apiKey"])
+  if (!apiKey) return
+  const base = apiUrl || "http://localhost:3000"
+  try {
+    const r = await fetch(base + "/api/jobs/search-tasks/pending", {
+      headers: { "X-API-Key": apiKey },
+    })
+    if (!r.ok) return
+    const j = await r.json()
+    const task = j.data
+    if (!task) return
+    isRunningTask = true
+    try { await runSearchTask(task, base, apiKey) }
+    finally { isRunningTask = false }
+  } catch (e) {
+    console.warn("[aija] poll failed:", e.message)
+  }
+}
+
+async function patchTask(base, apiKey, id, body) {
+  return fetch(`${base}/api/jobs/search-tasks/${id}`, {
+    method: "PATCH",
+    headers: { "X-API-Key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+}
+
+async function waitForTabComplete(tabId, timeoutMs = 30000) {
+  return new Promise((resolve) => {
+    const t0 = Date.now()
+    function listener(id, info) {
+      if (id === tabId && info.status === "complete") {
+        chrome.tabs.onUpdated.removeListener(listener)
+        resolve(true)
+      }
+      if (Date.now() - t0 > timeoutMs) {
+        chrome.tabs.onUpdated.removeListener(listener)
+        resolve(false)
+      }
+    }
+    chrome.tabs.onUpdated.addListener(listener)
+  })
+}
+
+async function extractFromTab(tabId, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const resp = await new Promise((resolve) => {
+        chrome.tabs.sendMessage(tabId, { type: "AUTO_COLLECT" }, (r) => {
+          if (chrome.runtime.lastError) resolve({ error: chrome.runtime.lastError.message })
+          else resolve(r || {})
+        })
+      })
+      if (resp.jobs && resp.jobs.length) return resp.jobs
+      // wait + retry (Boss SPA hydrates lazily)
+      await new Promise((r) => setTimeout(r, 3000))
+    } catch (e) {
+      console.warn("[aija] extract attempt failed:", e.message)
+    }
+  }
+  return []
+}
+
+async function runSearchTask(task, base, apiKey) {
+  await patchTask(base, apiKey, task.id, { status: "running" })
+  const allJobs = []
+  let lastErr = null
+
+  for (const url of task.urls) {
+    let tabId = null
+    try {
+      const tab = await chrome.tabs.create({ url, active: false })
+      tabId = tab.id
+      await waitForTabComplete(tabId)
+      // give Boss SPA extra time to hydrate list
+      await new Promise((r) => setTimeout(r, 5000))
+      const jobs = await extractFromTab(tabId)
+      for (const j of jobs) allJobs.push(j)
+    } catch (e) {
+      lastErr = e.message
+    } finally {
+      if (tabId) try { await chrome.tabs.remove(tabId) } catch {}
+    }
+  }
+
+  // dedup by url within this batch (server also dedups against existing)
+  const seen = new Set()
+  const dedup = []
+  for (const j of allJobs) {
+    if (j.url && seen.has(j.url)) continue
+    if (j.url) seen.add(j.url)
+    dedup.push(j)
+  }
+
+  const status = dedup.length === 0 ? "failed" : "done"
+  const message = dedup.length === 0 ? (lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）") : `共提取 ${dedup.length} 个岗位`
+  await patchTask(base, apiKey, task.id, { status, jobs: dedup, message })
+}
+
+// ---------- 原有消息路由 ----------
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Import jobs: content script sends job data, SW sends to API
   if (message.type === "IMPORT_JOBS") {
