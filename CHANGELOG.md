@@ -41,3 +41,39 @@
 ### 部署
 - `ecosystem.config.cjs` — PM2配置（阿里云ECS）
 - `npm run build && pm2 start ecosystem.config.cjs`
+
+## 2026-05-03 详情页 JD 二次抓取 (`feat/job-detail-jd`)
+
+### 痛点
+PR #2 后, AI 搜来的 Boss 岗位 `Job.jdText` 只有列表摘要 (18-20 字), 匹配
+prompt 拿空 JD 跑 LLM 出来的分基本是噪音 — 功能在跑但结果不可信.
+
+### 完成
+- [x] 新模型 `JdFetchTask` (一 job 一条 upsert, `@@index([userId,status])`)
+- [x] `enqueueJdFetch(userId, candidates)` + 8 单测: 上限 50 / 非 Boss 跳过 / 空 url 跳过 / 冷却判定 / stale-running sweep
+- [x] SearchTask done 时自动入队新 jobs (失败 swallow, 非关键路径)
+- [x] `extractList` 列表片段兜底 (.tag-list / .info-desc / .job-area)
+- [x] `/api/jd-fetch-tasks/pending` GET — 原子翻转 pending → running + 同 user JdFetchTask/SearchTask running 锁 + 30min cool-off (3 失败/10min)
+- [x] `/api/jd-fetch-tasks/:id` PATCH — done 事务里升级 Job.jdText, jdText < 30 字 coerce 为 failed (不覆盖摘要)
+- [x] 扩展 SW 同 alarm 触发 search + jd-fetch 轮询, 互斥跑, 4s 节流, console.log 详细日志
+- [x] content/content.js 加 `AUTO_COLLECT_DETAIL` 消息处理
+- [x] boss extractor 鲁棒化: JSON-LD 长度门槛 + 多 fallback 选择器 + 启发式找含"职位描述/岗位职责"的最大文本块
+- [x] 抽屉 / `/jobs/[id]` 抓取中态 banner + 15s 自动刷新, 失败灰色 banner
+
+### 验证
+- [x] vitest 26/26 pass (新增 jd-fetch 8 项)
+- [x] lint exit 0
+- [x] build 36 routes 全编 (新增 /api/jd-fetch-tasks/pending + /api/jd-fetch-tasks/[id])
+- [x] `scripts/verify-jd-fetch.ts` API e2e 18/18 断言: 原子翻转/锁/冷却/jdText 升级/failed 保留摘要/coerce 短 jdText
+- [x] **真机 Chrome 端到端**: SearchTask done → 自动入队 14 条 → SW 拾取 → 后台 active:false 开 tab → extractor 拿 JSON-LD JobPosting → PATCH 回传 → 5 done (jdText 18-20 字 → 344-534 字真实 JD), 3 failed (cool-off 触发, 设计如此), 6 pending. 详见 `docs/plans/2026-05-03-job-detail-jd-verification.md`
+
+### 顺手修
+- [x] PR #2 c10c877 带进的祖传 bug: `extension/content/boss-apply.js` 中文字符串里 ASCII `"` 误终止字符串导致 SW 加载失败 (ce reload 前一直没暴露)
+- [x] `.gitignore` 屏蔽 `scripts/_*` `docs/screenshots/mockup-*` (避免 `git add -A` 扫到外部 scratch 资产)
+
+### 不在本期
+- 多平台 detail extractor (LinkedIn/拉勾/智联) — 已有列表 extractor, 加路由即可
+- 手动"重抓 JD"按钮 (失败任务 / 老 job)
+- 失败一次自动重试 (隔 1h)
+- 优先级队列 (看板 applied 状态优先)
+- L3 自动打招呼 (Boss 风控线明确不踩)
