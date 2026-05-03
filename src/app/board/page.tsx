@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { KanbanBoard } from "@/components/board/kanban-board"
+import { ApplicationDrawer } from "@/components/board/application-drawer"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -15,6 +16,7 @@ export default function BoardPage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<ApplicationStats | null>(null)
   const [tab, setTab] = useState("board")
+  const [selectedAppId, setSelectedAppId] = useState<number | null>(null)
 
   const fetchData = useCallback(async () => {
     const headers = getHeaders()
@@ -47,20 +49,8 @@ export default function BoardPage() {
     }
   }
 
-  const handleCardClick = async (app: Application) => {
-    const headers = getHeaders()
-    const res = await fetch(`/api/applications/${app.id}`, { headers })
-    if (res.ok) {
-      const detail = (await res.json()).data as Record<string, unknown>
-      const job = detail.job as Record<string, unknown> | undefined
-      const statusLogs = detail.statusLogs as unknown[] | undefined
-      alert(
-        `岗位: ${job?.title || "-"}\n公司: ${job?.company || "-"}\n` +
-        `匹配度: ${detail.matchScore || "-"}分\n状态: ${detail.status}\n` +
-        `备注: ${detail.notes || "无"}\n` +
-        `状态变更次数: ${statusLogs?.length || 0}`
-      )
-    }
+  const handleCardClick = (app: Application) => {
+    setSelectedAppId(app.id)
   }
 
   if (authLoading || loading) return <LoadingSpinner message="加载中..." />
@@ -85,6 +75,13 @@ export default function BoardPage() {
           onCardClick={handleCardClick}
         />
       )}
+
+      <ApplicationDrawer
+        applicationId={selectedAppId}
+        onClose={() => setSelectedAppId(null)}
+        onUpdated={fetchData}
+        getHeaders={getHeaders}
+      />
 
       {tab === "stats" && stats && (
         <div className="space-y-6">

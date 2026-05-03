@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { JobCard } from "@/components/jobs/job-card"
 import { JobInput } from "@/components/jobs/job-input"
+import { AutoSearch } from "@/components/jobs/auto-search"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
 import { Plus, Briefcase } from "lucide-react"
 import type { Job } from "@/types"
@@ -40,6 +41,8 @@ export default function JobsPage() {
           <Plus className="mr-2 h-4 w-4" />添加岗位
         </Button>
       </div>
+
+      <AutoSearch getHeaders={getHeaders} onJobsImported={fetchJobs} />
 
       <JobInput
         open={showInput}

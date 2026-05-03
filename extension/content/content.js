@@ -7,6 +7,66 @@
   var extractor = findExtractor(url)
   if (!extractor) return
 
+  // ---- BOSS_PROBE 消息处理：SW 探活，判断页面是否就绪 ----
+  // 返回 { ready: bool, needLogin: bool, jobCount: number }
+  chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+    if (msg && msg.type === "BOSS_PROBE") {
+      try {
+        var hasJobCards = !!document.querySelector(
+          "[class*='job-card-wrap'], li.job-card-wrapper, [class*='job-card'], [class*='job-search-card'], [data-job-id]",
+        )
+        var url = location.href
+        var needLogin =
+          /\/login|\/security-check|\/verify/.test(url) ||
+          !!document.querySelector(".btn-login, [class*='login-btn'], [class*='security']") ||
+          /请登录|登录后查看|安全验证/.test(document.body.innerText || "")
+        sendResponse({
+          ready: hasJobCards,
+          needLogin: needLogin,
+          jobCount: document.querySelectorAll("[class*='job-card']").length,
+          url: url,
+        })
+      } catch (err) {
+        sendResponse({ ready: false, needLogin: false, error: err.message })
+      }
+      return true
+    }
+  })
+
+  // ---- AUTO_COLLECT 消息处理：service worker 在自动搜岗位任务里调用 ----
+  // 不依赖 UI，直接跑 extractor 的 list 逻辑，把整页所有岗位返回 SW
+  chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+    if (msg && msg.type === "AUTO_COLLECT") {
+      try {
+        var jobs = []
+        if (typeof extractor.extractList === "function") {
+          jobs = extractor.extractList() || []
+        }
+        if (!jobs.length) {
+          // 兜底：扫描列表 DOM，沿用 ui.js 用过的选择器
+          var items = document.querySelectorAll(
+            "[class*='job-card-wrap'], li.job-card-wrapper, [class*='job-card'], [class*='job-search-card'], .joblist-box__item, [data-job-id]",
+          )
+          items.forEach(function (el) {
+            var title = cleanText(
+              (el.querySelector(".job-name") || el.querySelector('[class*="title"]') || el.querySelector("h3") || {}).textContent || "",
+            )
+            var company = cleanText(
+              (el.querySelector(".company-name") || el.querySelector('[class*="company"]') || {}).textContent || "",
+            )
+            var salary = extractSalaryFromText(el.textContent || "")
+            var link = (el.querySelector("a") || {}).href || ""
+            if (title) jobs.push({ title: title, company: company, salaryRange: salary, url: link, platform: extractor.name })
+          })
+        }
+        sendResponse({ jobs: jobs })
+      } catch (err) {
+        sendResponse({ error: err.message || String(err), jobs: [] })
+      }
+      return true
+    }
+  })
+
   injectStyles()
 
   var isDetail = extractor.detectDetailPage(url)

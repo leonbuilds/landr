@@ -18,6 +18,7 @@ model User {
   jobs         Job[]
   applications Application[]
   settings     Setting[]
+  searchTasks  SearchTask[]
 }
 
 model Resume {
@@ -90,4 +91,22 @@ model Setting {
   value  String?
 
   @@unique([userId, key])
+}
+
+// 自主搜岗位任务：用户提交一句话或选简历 → 后端 LLM 解析为 Boss 搜索参数 →
+// 扩展 service worker 轮询拿到任务 → 自动开 Boss 搜索页 → 翻页采集 → 回传结果
+model SearchTask {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source    String   // "prompt" | "resume"
+  prompt    String?  // 原始 user 输入或简历 rawText 片段
+  resumeId  Int?
+  params    String   // JSON: {query, city, cityCode, salaryMin, salaryMax, pages, platform}
+  status    String   @default("pending") // pending | running | done | failed
+  collected Int      @default(0)
+  skipped   Int      @default(0)
+  message   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
