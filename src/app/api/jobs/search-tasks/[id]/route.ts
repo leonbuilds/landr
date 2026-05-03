@@ -5,6 +5,7 @@ import { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAuthUserId } from "@/lib/auth"
 import { corsResponse, corsPreflight, resolveExtensionApiKey } from "@/lib/extension-auth"
+import { enqueueJdFetch } from "@/lib/jd-fetch"
 
 interface InboundJob {
   title: string
@@ -51,6 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   let collected = task.collected
   let skipped = task.skipped
+  const newlyCreated: { id: number; url: string | null; platform: string | null }[] = []
 
   if (status === "done" && Array.isArray(jobs) && jobs.length) {
     const existingUrls = new Set(
@@ -69,7 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         continue
       }
       try {
-        await prisma.job.create({
+        const created = await prisma.job.create({
           data: {
             userId,
             title: j.title,
@@ -80,9 +82,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             location: j.location || null,
             url: j.url || null,
           },
+          select: { id: true, url: true, platform: true },
         })
         if (j.url) existingUrls.add(j.url)
         collected++
+        newlyCreated.push(created)
       } catch {
         skipped++
       }
@@ -93,6 +97,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id: taskId },
     data: { status, collected, skipped, message: message || null },
   })
+
+  // Auto-enqueue JD-fetch for newly imported boss jobs (failure ignored — not critical)
+  if (status === "done" && newlyCreated.length > 0) {
+    try {
+      await enqueueJdFetch(userId, newlyCreated)
+    } catch (err) {
+      console.error("[search-task] enqueueJdFetch failed:", err)
+    }
+  }
 
   return corsResponse({ data: updated })
 }

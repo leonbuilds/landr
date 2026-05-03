@@ -83,7 +83,31 @@ registerExtractor({
         ""
       )
       const link = item.querySelector("a")?.href || ""
-      if (title) jobs.push({ title, company, salaryRange: salary, url: link, platform: "boss" })
+
+      // 列表片段：经验/学历 + 福利 tags + 一行简介，作为 jdText 摘要兜底，
+      // 等详情页二次抓取后会被完整 JD 覆盖。
+      const tagTexts = []
+      item.querySelectorAll('.tag-list li, .info-desc, .job-area, .job-area-wrapper, [class*="tag"]').forEach((el) => {
+        const t = cleanText(el.textContent || "")
+        if (t && t.length < 40 && !tagTexts.includes(t)) tagTexts.push(t)
+      })
+      const snippet = tagTexts.slice(0, 12).join(" · ")
+
+      const location = cleanText(
+        item.querySelector('.job-area, .job-area-wrapper')?.textContent ||
+        item.querySelector('[class*="location"]')?.textContent ||
+        ""
+      )
+
+      if (title) jobs.push({
+        title,
+        company,
+        salaryRange: salary,
+        url: link,
+        platform: "boss",
+        location,
+        jdText: snippet,
+      })
     })
     return jobs
   },
