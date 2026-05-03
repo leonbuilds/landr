@@ -95,14 +95,16 @@ export function AutoSearch({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function handlePreview() {
+  async function handlePreview(opts?: { resumeId?: number; prompt?: string }) {
     setErrMsg("")
     setPlan(null)
     setPlanning(true)
     try {
       const body: Record<string, unknown> = {}
-      if (resumeId) body.resumeId = resumeId
-      else if (prompt.trim()) body.prompt = prompt.trim()
+      const useResumeId = opts?.resumeId ?? resumeId
+      const usePrompt = opts?.prompt ?? prompt
+      if (useResumeId) body.resumeId = useResumeId
+      else if (usePrompt.trim()) body.prompt = usePrompt.trim()
       else { setErrMsg("请输入一句话或选一份简历"); setPlanning(false); return }
 
       const r = await fetch("/api/jobs/search-plan", {
@@ -180,21 +182,31 @@ export function AutoSearch({
             onChange={(e) => { setPrompt(e.target.value); setResumeId(null); setPlan(null) }}
             onKeyDown={(e) => { if (e.key === "Enter") handlePreview() }}
           />
-          <Button onClick={handlePreview} disabled={planning} variant="outline">
+          <Button onClick={() => handlePreview()} disabled={planning} variant="outline">
             {planning ? <Loader2 className="h-4 w-4 animate-spin" /> : "预览"}
           </Button>
         </div>
 
         {resumes.length > 0 && (
           <div className="flex flex-wrap gap-2 items-center text-sm">
-            <span className="text-gray-500">或基于简历：</span>
+            <span className="text-gray-500">或基于简历一键搜：</span>
             {resumes.map((r) => (
               <Button
                 key={r.id}
                 size="sm"
                 variant={resumeId === r.id ? "default" : "outline"}
-                onClick={() => { setResumeId(r.id); setPrompt(""); setPlan(null) }}
-              >{r.name}</Button>
+                disabled={planning}
+                onClick={() => {
+                  setResumeId(r.id)
+                  setPrompt("")
+                  setPlan(null)
+                  // 点简历 = 立刻调 LLM 预览（不用再点"预览"按钮）
+                  handlePreview({ resumeId: r.id })
+                }}
+              >
+                {planning && resumeId === r.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                {r.name}
+              </Button>
             ))}
           </div>
         )}
