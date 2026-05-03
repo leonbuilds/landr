@@ -96,7 +96,7 @@
       "  <div style='flex:1'>" +
       "    <div style='font-size:13px;font-weight:600;color:#92400e;margin-bottom:6px'>🤖 AI 求职 Agent · 投递助手</div>" +
       "    <textarea id='aija-greeting' rows='3' style='width:100%;border:1px solid #d97706;border-radius:6px;padding:8px;font-size:13px;color:#1f2937;background:#fffbeb;resize:vertical;'></textarea>" +
-      "    <div style='font-size:11px;color:#92400e;margin-top:4px'>检查打招呼语，可以改两句更对得上你的风格。点确认后我帮你点 Boss 的"立即沟通"并发送。</div>" +
+      "    <div style='font-size:11px;color:#92400e;margin-top:4px'>检查打招呼语，可以改两句更对得上你的风格。点确认后我帮你点 Boss 的&quot;立即沟通&quot;并发送。</div>" +
       "    <div id='aija-status' style='font-size:12px;color:#7c2d12;margin-top:4px'></div>" +
       "  </div>" +
       "  <div style='display:flex;flex-direction:column;gap:6px;flex-shrink:0'>" +
@@ -180,7 +180,7 @@
       setStatus("✓ 已发送，等待 Boss 跳转…")
       watchForChat()
     } else {
-      setStatus("⚠ 没找到发送按钮。已为你填好打招呼语，请手动点页面里的"发送"。")
+      setStatus("⚠ 没找到发送按钮。已为你填好打招呼语，请手动点页面里的【发送】。")
       if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = "确认发送" }
     }
   }

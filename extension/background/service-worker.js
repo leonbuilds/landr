@@ -3,7 +3,8 @@
 
 // ---------- 自主搜岗位任务轮询（v2 新增） ----------
 const POLL_ALARM = "aija-search-poll"
-let isRunningTask = false
+let isRunningTask = false   // 搜任务跑中
+let isRunningJd = false     // JD 抓取跑中
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create(POLL_ALARM, { periodInMinutes: 0.5 })
@@ -12,7 +13,10 @@ chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.create(POLL_ALARM, { periodInMinutes: 0.5 })
 })
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === POLL_ALARM) pollSearchTasksOnce()
+  if (alarm.name === POLL_ALARM) {
+    pollSearchTasksOnce()
+    pollJdFetchOnce()
+  }
 })
 
 async function pollSearchTasksOnce() {
@@ -169,6 +173,88 @@ async function runSearchTask(task, base, apiKey) {
     ? (lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）")
     : `共提取 ${dedup.length} 个岗位${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
   await patchTask(base, apiKey, task.id, { status, jobs: dedup, message })
+}
+
+// ---------- JD 二次抓取任务轮询 ----------
+async function patchJdTask(base, apiKey, id, body) {
+  return fetch(`${base}/api/jd-fetch-tasks/${id}`, {
+    method: "PATCH",
+    headers: { "X-API-Key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+}
+
+async function extractDetailFromTab(tabId, timeoutMs = 45000) {
+  // SPA 详情页 hydrate 很慢，先等 6s
+  await new Promise((r) => setTimeout(r, 6000))
+  const start = Date.now()
+  // 最多重试 6 次, 每次间隔 5s, 总不超 timeoutMs
+  for (let i = 0; i < 6 && Date.now() - start < timeoutMs; i++) {
+    const resp = await new Promise((resolve) => {
+      chrome.tabs.sendMessage(tabId, { type: "AUTO_COLLECT_DETAIL" }, (r) => {
+        if (chrome.runtime.lastError) resolve({ error: chrome.runtime.lastError.message })
+        else resolve(r || {})
+      })
+    })
+    console.log("[aija-jd] retry#" + i, JSON.stringify({
+      hasResp: !!resp,
+      err: resp && resp.error,
+      jdLen: resp && resp.jdText ? resp.jdText.length : 0,
+      jdHead: resp && resp.jdText ? resp.jdText.slice(0, 80) : "",
+    }))
+    if (resp && resp.jdText && resp.jdText.length >= 30) return resp
+    await new Promise((r) => setTimeout(r, 5000))
+  }
+  return null
+}
+
+async function pollJdFetchOnce() {
+  if (isRunningTask || isRunningJd) return
+  const { apiUrl, apiKey } = await chrome.storage.local.get(["apiUrl", "apiKey"])
+  if (!apiKey) return
+  const base = apiUrl || "http://localhost:3000"
+  try {
+    const r = await fetch(base + "/api/jd-fetch-tasks/pending", {
+      headers: { "X-API-Key": apiKey },
+    })
+    if (!r.ok) return
+    const j = await r.json()
+    const task = j.data
+    if (!task) return
+    isRunningJd = true
+    try {
+      await runJdFetchTask(task, base, apiKey)
+    } finally {
+      isRunningJd = false
+    }
+  } catch (e) {
+    console.warn("[aija-jd] poll failed:", e.message)
+  }
+}
+
+async function runJdFetchTask(task, base, apiKey) {
+  let tabId = null
+  try {
+    const tab = await chrome.tabs.create({ url: task.url, active: false })
+    tabId = tab.id
+    const ok = await waitForTabComplete(tabId, 25000)
+    if (!ok) {
+      await patchJdTask(base, apiKey, task.id, { status: "failed", error: "tab-load-timeout" })
+      return
+    }
+    const detail = await extractDetailFromTab(tabId, 30000)
+    if (!detail || !detail.jdText) {
+      await patchJdTask(base, apiKey, task.id, { status: "failed", error: "detail-empty-or-timeout" })
+      return
+    }
+    await patchJdTask(base, apiKey, task.id, { status: "done", jdText: detail.jdText })
+  } catch (e) {
+    await patchJdTask(base, apiKey, task.id, { status: "failed", error: (e && e.message) || "unknown" })
+  } finally {
+    if (tabId) try { await chrome.tabs.remove(tabId) } catch {}
+    // 节流: 单条结束后 sleep 4s 再让 alarm 拾下一条
+    await new Promise((r) => setTimeout(r, 4000))
+  }
 }
 
 // ---------- 投递完成回写 ----------

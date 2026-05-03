@@ -21,7 +21,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
   const app = await prisma.application.findUnique({
     where: { id: parseInt(id) },
-    include: { resume: true, job: true, statusLogs: { orderBy: { createdAt: "desc" } } },
+    include: {
+      resume: true,
+      job: { include: { jdFetchTask: { select: { status: true, error: true } } } },
+      statusLogs: { orderBy: { createdAt: "desc" } },
+    },
   })
   if (!app || app.userId !== userId) {
     return corsResponse({ error: { code: "FORBIDDEN", message: "无权访问" } }, 403)

@@ -67,6 +67,16 @@ export function ApplicationDrawer({ applicationId, onClose, onUpdated, getHeader
 
   useEffect(() => { if (open) load() }, [open, load])
 
+  const jdFetchStatus = app?.job?.jdFetchTask?.status
+  const isFetchingJd = jdFetchStatus === "pending" || jdFetchStatus === "running"
+
+  // 抓取中态: 每 15s 自动刷一次直到终态, 让用户不必手动关掉重开
+  useEffect(() => {
+    if (!isFetchingJd || !applicationId) return
+    const t = setInterval(() => { load() }, 15000)
+    return () => clearInterval(t)
+  }, [isFetchingJd, applicationId, load])
+
   if (!open) return null
 
   const match = safeParse<MatchResult>(app?.matchDetail)
@@ -187,6 +197,24 @@ export function ApplicationDrawer({ applicationId, onClose, onUpdated, getHeader
 
             {!loading && app && (
               <>
+                {/* JD fetch status banner */}
+                {isFetchingJd && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800 flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                    <span>
+                      JD 完整版抓取中…当前匹配基于列表摘要，完整 JD 抓回后可重新点&ldquo;匹配&rdquo;获取更准确的评分。
+                    </span>
+                  </div>
+                )}
+                {jdFetchStatus === "failed" && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3 text-xs text-gray-600 flex items-center gap-2">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span>
+                      JD 完整版抓取失败（{job?.jdFetchTask?.error || "未知"}），当前匹配基于列表摘要。
+                    </span>
+                  </div>
+                )}
+
                 {/* Match section */}
                 <section>
                   <h3 className="text-sm font-semibold mb-2 flex items-center gap-1"><Sparkles className="h-4 w-4 text-blue-500" />匹配详情</h3>

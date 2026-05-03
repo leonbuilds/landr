@@ -13,13 +13,13 @@ registerExtractor({
 
   extractDetail() {
     const ld = extractLdJson("JobPosting")
-    if (ld) {
+    if (ld && ld.description && cleanText(ld.description).length >= 50) {
       return {
         title: ld.title || "",
         company: ld.hiringOrganization?.name || ld.industry || "",
         location: ld.jobLocation?.[0]?.addressLocality || ld.jobLocation?.address?.addressLocality || "",
         salaryRange: "",
-        jdText: ld.description || "",
+        jdText: cleanText(ld.description),
         url: window.location.href,
         platform: "boss",
       }
@@ -52,13 +52,31 @@ registerExtractor({
       ""
     )
 
-    const jdText = cleanText(
+    // 1. 已知选择器 (Boss 常见 class 名)
+    let jdText = cleanText(
       document.querySelector(".job-sec .text")?.textContent ||
       document.querySelector(".job-detail .text")?.textContent ||
+      document.querySelector(".job-sec-text")?.textContent ||
+      document.querySelector("[class*='job-sec-text']")?.textContent ||
+      document.querySelector("[class*='job-detail-section']")?.textContent ||
+      document.querySelector("[class*='text-overflow']")?.textContent ||
       document.querySelector('[class*="job-detail"]')?.textContent ||
       document.querySelector('[class*="detail-content"]')?.textContent ||
       ""
     )
+
+    // 2. 启发式: 找页面上含"职位描述/岗位职责/任职要求"且文本长度 100-8000 的最大块
+    if (jdText.length < 100) {
+      const blocks = Array.from(document.querySelectorAll("div, section, article"))
+      let best = ""
+      for (const el of blocks) {
+        const t = cleanText(el.textContent || "")
+        if (t.length < 100 || t.length > 8000) continue
+        if (!/职位描述|岗位职责|任职要求|岗位要求|工作内容|岗位职能|岗位描述|工作职责/.test(t)) continue
+        if (t.length > best.length) best = t
+      }
+      if (best.length > jdText.length) jdText = best
+    }
 
     return { title, company, location, salaryRange: salary, jdText, url: window.location.href, platform: "boss" }
   },
@@ -83,7 +101,31 @@ registerExtractor({
         ""
       )
       const link = item.querySelector("a")?.href || ""
-      if (title) jobs.push({ title, company, salaryRange: salary, url: link, platform: "boss" })
+
+      // 列表片段：经验/学历 + 福利 tags + 一行简介，作为 jdText 摘要兜底，
+      // 等详情页二次抓取后会被完整 JD 覆盖。
+      const tagTexts = []
+      item.querySelectorAll('.tag-list li, .info-desc, .job-area, .job-area-wrapper, [class*="tag"]').forEach((el) => {
+        const t = cleanText(el.textContent || "")
+        if (t && t.length < 40 && !tagTexts.includes(t)) tagTexts.push(t)
+      })
+      const snippet = tagTexts.slice(0, 12).join(" · ")
+
+      const location = cleanText(
+        item.querySelector('.job-area, .job-area-wrapper')?.textContent ||
+        item.querySelector('[class*="location"]')?.textContent ||
+        ""
+      )
+
+      if (title) jobs.push({
+        title,
+        company,
+        salaryRange: salary,
+        url: link,
+        platform: "boss",
+        location,
+        jdText: snippet,
+      })
     })
     return jobs
   },

@@ -19,6 +19,7 @@ model User {
   applications Application[]
   settings     Setting[]
   searchTasks  SearchTask[]
+  jdFetchTasks JdFetchTask[]
 }
 
 model Resume {
@@ -49,6 +50,7 @@ model Job {
   url         String?
   createdAt   DateTime      @default(now())
   applications Application[]
+  jdFetchTask  JdFetchTask?
 }
 
 model Application {
@@ -109,4 +111,21 @@ model SearchTask {
   message   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// JD 二次抓取任务：搜任务终态后，对每条新入库的 Boss 岗位入队一条 fetch task。
+// 扩展 SW 串行拾取 → 后台开详情 tab → extractor.extractDetail() → PATCH 回传 jdText。
+// 失败保留列表摘要兜底，不阻塞匹配。
+model JdFetchTask {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     Int      @unique
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status    String   @default("pending") // pending | running | done | failed
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
 }

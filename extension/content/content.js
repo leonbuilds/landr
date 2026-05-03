@@ -33,6 +33,30 @@
     }
   })
 
+  // ---- AUTO_COLLECT_DETAIL 消息：SW 在 JD 二次抓取任务里调用 ----
+  // 调 extractor.extractDetail() 拿完整 JD 返回 SW
+  chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+    if (msg && msg.type === "AUTO_COLLECT_DETAIL") {
+      try {
+        if (typeof extractor.extractDetail !== "function") {
+          sendResponse({ error: "no-detail-extractor" })
+          return true
+        }
+        var job = extractor.extractDetail() || {}
+        sendResponse({
+          jdText: job.jdText || "",
+          title: job.title || "",
+          company: job.company || "",
+          location: job.location || "",
+          salaryRange: job.salaryRange || "",
+        })
+      } catch (err) {
+        sendResponse({ error: err.message || String(err) })
+      }
+      return true
+    }
+  })
+
   // ---- AUTO_COLLECT 消息处理：service worker 在自动搜岗位任务里调用 ----
   // 不依赖 UI，直接跑 extractor 的 list 逻辑，把整页所有岗位返回 SW
   chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {

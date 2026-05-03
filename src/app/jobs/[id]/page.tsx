@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MatchVisual } from "@/components/jobs/match-visual"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
-import { ChevronDown, ChevronUp, ArrowLeft, ExternalLink } from "lucide-react"
+import { ChevronDown, ChevronUp, ArrowLeft, ExternalLink, Loader2, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import type { Job, Resume } from "@/types"
 
@@ -63,6 +63,18 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       })
     }
   }, [authLoading, isAuthenticated, id, getHeaders])
+
+  // 抓取中态: 每 15s 拉一次, 完整 JD 抓回后 jdText 会自动刷新
+  useEffect(() => {
+    const status = job?.jdFetchTask?.status
+    if (status !== "pending" && status !== "running") return
+    const headers = getHeaders()
+    const t = setInterval(async () => {
+      const r = await fetch(`/api/jobs/${id}`, { headers })
+      if (r.ok) setJob((await r.json()).data)
+    }, 15000)
+    return () => clearInterval(t)
+  }, [job?.jdFetchTask?.status, id, getHeaders])
 
   const handleMatch = async () => {
     if (!selectedResume) return
@@ -141,6 +153,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               )}
             </div>
           )}
+          {job.jdFetchTask?.status === "pending" || job.jdFetchTask?.status === "running" ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-3 text-xs text-amber-800 flex items-center gap-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+              <span>JD 完整版抓取中…当前显示的是列表摘要，完整版抓回后页面会自动刷新。</span>
+            </div>
+          ) : job.jdFetchTask?.status === "failed" ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-md p-3 mb-3 text-xs text-gray-600 flex items-center gap-2">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>JD 完整版抓取失败（{job.jdFetchTask.error || "未知"}），当前显示列表摘要。</span>
+            </div>
+          ) : null}
           {job.jdText && (
             <div>
               <h4 className="text-sm font-medium mb-2">JD原文</h4>
