@@ -22,14 +22,23 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { title, jdText, parseWithAI } = body
+    const {
+      title,
+      jdText,
+      parseWithAI,
+      url: bodyUrl,
+      company: bodyCompany,
+      location: bodyLocation,
+      salaryRange: bodySalaryRange,
+      platform: bodyPlatform,
+    } = body
 
     if (!jdText?.trim()) {
       return NextResponse.json({ error: { code: "BAD_REQUEST", message: "请输入JD内容" } }, { status: 400 })
     }
 
     let parsedJson = ""
-    let company = ""
+    let company = bodyCompany || ""
     let finalTitle = title || "未命名岗位"
 
     if (parseWithAI) {
@@ -57,10 +66,13 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         title: finalTitle,
-        company,
-        platform: "manual",
+        company: company || null,
+        platform: bodyPlatform || "manual",
         jdText,
         parsedJson: parsedJson || null,
+        url: bodyUrl || null,
+        location: bodyLocation || null,
+        salaryRange: bodySalaryRange || null,
       },
     })
 

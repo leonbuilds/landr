@@ -171,8 +171,33 @@ async function runSearchTask(task, base, apiKey) {
   await patchTask(base, apiKey, task.id, { status, jobs: dedup, message })
 }
 
+// ---------- 投递完成回写 ----------
+async function handleApplyDone(appId, apiBase) {
+  const { apiKey } = await chrome.storage.local.get(["apiKey"])
+  if (!apiKey) return { ok: false, error: "扩展未配置 API Key" }
+  const base = apiBase || "http://localhost:3000"
+  try {
+    const res = await fetch(`${base}/api/applications/${appId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+      body: JSON.stringify({ status: "applied", appliedAt: new Date().toISOString() }),
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      return { ok: false, error: j.error?.message || `HTTP ${res.status}` }
+    }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e.message }
+  }
+}
+
 // ---------- 原有消息路由 ----------
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message && message.type === "APPLY_DONE") {
+    handleApplyDone(message.appId, message.apiBase).then(sendResponse)
+    return true
+  }
   // Import jobs: content script sends job data, SW sends to API
   if (message.type === "IMPORT_JOBS") {
     handleImport(message.jobs).then(sendResponse).catch((e) => sendResponse({ error: e.message }))

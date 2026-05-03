@@ -21,7 +21,7 @@
         "*://*.zhaopin.com/*",
         "*://*.xiaohongshu.com/*"
       ],
-      "js": ["utils/storage.js", "utils/api.js", "content/shared.js", "content/extractors/boss.js", "content/extractors/linkedin.js", "content/extractors/lagou.js", "content/extractors/zhilian.js", "content/extractors/xiaohongshu.js", "content/ui.js", "content/content.js"],
+      "js": ["utils/storage.js", "utils/api.js", "content/shared.js", "content/extractors/boss.js", "content/extractors/linkedin.js", "content/extractors/lagou.js", "content/extractors/zhilian.js", "content/extractors/xiaohongshu.js", "content/ui.js", "content/content.js", "content/boss-apply.js"],
       "run_at": "document_idle"
     }
   ],
