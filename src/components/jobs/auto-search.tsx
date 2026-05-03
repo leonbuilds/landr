@@ -255,22 +255,27 @@ export function AutoSearch({
         {tasks.length > 0 && (
           <div className="border-t pt-3">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xs text-gray-500">最近任务（最多显示 5 条）</div>
-              {tasks.some((t) => t.status === "pending" || t.status === "running") && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs text-red-600 hover:bg-red-50 h-7"
-                  onClick={async () => {
-                    if (!confirm("清空所有等待中和运行中的任务？")) return
-                    await fetch("/api/jobs/search-tasks", { method: "DELETE", headers: getHeaders() })
-                    const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
-                    if (r.ok) setTasks((await r.json()).data || [])
-                  }}
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />清空未完成
-                </Button>
-              )}
+              <div className="text-xs text-gray-500">
+                最近任务（最多显示 5 条）
+                {(() => {
+                  const n = tasks.filter((t) => t.status === "pending" || t.status === "running").length
+                  return n > 0 ? <span className="ml-1 text-amber-600">· {n} 个进行中</span> : null
+                })()}
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs text-red-600 hover:bg-red-50 h-7 disabled:text-gray-400"
+                disabled={!tasks.some((t) => t.status === "pending" || t.status === "running")}
+                onClick={async () => {
+                  if (!confirm("清空所有等待中和运行中的任务？")) return
+                  await fetch("/api/jobs/search-tasks", { method: "DELETE", headers: getHeaders() })
+                  const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                  if (r.ok) setTasks((await r.json()).data || [])
+                }}
+              >
+                <Trash2 className="h-3 w-3 mr-1" />清空未完成
+              </Button>
             </div>
             <div className="space-y-1">
               {tasks.slice(0, 5).map((t) => {
