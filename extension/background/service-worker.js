@@ -184,21 +184,26 @@ async function patchJdTask(base, apiKey, id, body) {
   })
 }
 
-async function extractDetailFromTab(tabId, timeoutMs = 30000) {
-  // SPA 详情页 hydrate 慢，先等 3s
-  await new Promise((r) => setTimeout(r, 3000))
+async function extractDetailFromTab(tabId, timeoutMs = 45000) {
+  // SPA 详情页 hydrate 很慢，先等 6s
+  await new Promise((r) => setTimeout(r, 6000))
   const start = Date.now()
-  // 最多重试 3 次, 每次间隔 4s, 总不超 timeoutMs
-  for (let i = 0; i < 3 && Date.now() - start < timeoutMs; i++) {
+  // 最多重试 6 次, 每次间隔 5s, 总不超 timeoutMs
+  for (let i = 0; i < 6 && Date.now() - start < timeoutMs; i++) {
     const resp = await new Promise((resolve) => {
       chrome.tabs.sendMessage(tabId, { type: "AUTO_COLLECT_DETAIL" }, (r) => {
         if (chrome.runtime.lastError) resolve({ error: chrome.runtime.lastError.message })
         else resolve(r || {})
       })
     })
+    console.log("[aija-jd] retry#" + i, JSON.stringify({
+      hasResp: !!resp,
+      err: resp && resp.error,
+      jdLen: resp && resp.jdText ? resp.jdText.length : 0,
+      jdHead: resp && resp.jdText ? resp.jdText.slice(0, 80) : "",
+    }))
     if (resp && resp.jdText && resp.jdText.length >= 30) return resp
-    if (resp && resp.error) console.warn("[aija-jd] detail extract:", resp.error)
-    await new Promise((r) => setTimeout(r, 4000))
+    await new Promise((r) => setTimeout(r, 5000))
   }
   return null
 }
