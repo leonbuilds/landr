@@ -81,24 +81,30 @@ async function extractFromTab(tabId, retries = 3) {
 }
 
 async function runSearchTask(task, base, apiKey) {
+  // 后端 GET /pending 已经原子翻转到 running。这里再 PATCH 一次只是心跳作用（更新 updatedAt）
   await patchTask(base, apiKey, task.id, { status: "running" })
   const allJobs = []
   let lastErr = null
 
-  for (const url of task.urls) {
+  for (let i = 0; i < task.urls.length; i++) {
+    const url = task.urls[i]
     let tabId = null
     try {
       const tab = await chrome.tabs.create({ url, active: false })
       tabId = tab.id
-      await waitForTabComplete(tabId)
-      // give Boss SPA extra time to hydrate list
-      await new Promise((r) => setTimeout(r, 5000))
+      await waitForTabComplete(tabId, 20000)
+      // Boss SPA hydrate
+      await new Promise((r) => setTimeout(r, 3000))
       const jobs = await extractFromTab(tabId)
       for (const j of jobs) allJobs.push(j)
     } catch (e) {
       lastErr = e.message
     } finally {
       if (tabId) try { await chrome.tabs.remove(tabId) } catch {}
+    }
+    // 每页完成后心跳一次，bump updatedAt 避免被服务端 3min stale 误杀
+    if (i < task.urls.length - 1) {
+      await patchTask(base, apiKey, task.id, { status: "running", message: `已采 ${i + 1}/${task.urls.length} 页` })
     }
   }
 

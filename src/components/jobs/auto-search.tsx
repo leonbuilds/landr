@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card"
-import { Loader2, Search, Check, Clock, AlertCircle, ExternalLink } from "lucide-react"
+import { Loader2, Search, Check, Clock, AlertCircle, ExternalLink, X, Trash2 } from "lucide-react"
 
 interface Plan {
   query: string
@@ -254,10 +254,28 @@ export function AutoSearch({
 
         {tasks.length > 0 && (
           <div className="border-t pt-3">
-            <div className="text-xs text-gray-500 mb-2">最近任务（最多显示 5 条）</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-gray-500">最近任务（最多显示 5 条）</div>
+              {tasks.some((t) => t.status === "pending" || t.status === "running") && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-red-600 hover:bg-red-50 h-7"
+                  onClick={async () => {
+                    if (!confirm("清空所有等待中和运行中的任务？")) return
+                    await fetch("/api/jobs/search-tasks", { method: "DELETE", headers: getHeaders() })
+                    const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                    if (r.ok) setTasks((await r.json()).data || [])
+                  }}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />清空未完成
+                </Button>
+              )}
+            </div>
             <div className="space-y-1">
               {tasks.slice(0, 5).map((t) => {
                 const params = (() => { try { return JSON.parse(t.params) } catch { return {} } })()
+                const cancelable = t.status === "pending" || t.status === "running"
                 return (
                   <div key={t.id} className="flex items-center gap-2 text-sm py-1">
                     {statusBadge(t)}
@@ -269,6 +287,19 @@ export function AutoSearch({
                     )}
                     {t.message && t.status !== "done" && (
                       <span className="text-xs text-gray-500 truncate max-w-xs" title={t.message}>{t.message}</span>
+                    )}
+                    {cancelable && (
+                      <button
+                        className="text-gray-400 hover:text-red-600 p-1"
+                        title="取消该任务"
+                        onClick={async () => {
+                          await fetch(`/api/jobs/search-tasks/${t.id}`, { method: "DELETE", headers: getHeaders() })
+                          const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                          if (r.ok) setTasks((await r.json()).data || [])
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     )}
                   </div>
                 )
