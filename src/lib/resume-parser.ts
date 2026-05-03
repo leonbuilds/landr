@@ -4,18 +4,30 @@ import PdfParser from "pdf2json"
 export async function parsePdf(buffer: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
     const parser = new PdfParser()
+    const timeout = setTimeout(() => reject(new Error("PDF 解析超时（>15s）")), 15000)
     parser.on("pdfParser_dataReady", (data: { Pages: { Texts: { R: { T: string }[] }[] }[] }) => {
+      clearTimeout(timeout)
       const texts: string[] = []
-      for (const page of data.Pages) {
-        for (const text of page.Texts) {
-          const line = text.R.map((r) => decodeURIComponent(r.T)).join(" ")
+      for (const page of data.Pages || []) {
+        for (const text of page.Texts || []) {
+          const line = text.R.map((r) => {
+            try { return decodeURIComponent(r.T) } catch { return r.T }
+          }).join(" ")
           texts.push(line)
         }
       }
-      resolve(texts.join("\n"))
+      resolve(texts.join("\n").trim())
     })
-    parser.on("pdfParser_dataError", reject)
-    parser.parseBuffer(buffer)
+    parser.on("pdfParser_dataError", (err: unknown) => {
+      clearTimeout(timeout)
+      reject(err instanceof Error ? err : new Error(String(err)))
+    })
+    try {
+      parser.parseBuffer(buffer)
+    } catch (e) {
+      clearTimeout(timeout)
+      reject(e)
+    }
   })
 }
 

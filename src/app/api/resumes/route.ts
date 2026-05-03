@@ -34,12 +34,22 @@ export async function POST(req: NextRequest) {
       if (file) {
         const buffer = Buffer.from(await file.arrayBuffer())
         const ext = file.name.split(".").pop()?.toLowerCase()
-        if (ext === "pdf") {
-          rawText = await parsePdf(buffer)
-        } else if (ext === "docx" || ext === "doc") {
-          rawText = await parseDocx(buffer)
-        } else {
-          return NextResponse.json({ error: { code: "BAD_REQUEST", message: "仅支持PDF、Word格式或纯文本" } }, { status: 400 })
+        try {
+          if (ext === "pdf") {
+            rawText = await parsePdf(buffer)
+          } else if (ext === "docx" || ext === "doc") {
+            rawText = await parseDocx(buffer)
+          } else if (ext === "txt") {
+            rawText = buffer.toString("utf8")
+          } else {
+            return NextResponse.json({ error: { code: "BAD_REQUEST", message: "仅支持 PDF / Word / TXT 格式或纯文本粘贴" } }, { status: 400 })
+          }
+        } catch (parseErr) {
+          console.error("Resume parse error:", parseErr)
+          return NextResponse.json(
+            { error: { code: "PARSE_FAILED", message: `无法解析该文件（${ext?.toUpperCase()}）。建议改为粘贴纯文本，或导出为 TXT 后重试。` } },
+            { status: 422 },
+          )
         }
         filePath = file.name
         name = file.name.replace(/\.[^/.]+$/, "")
