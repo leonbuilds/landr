@@ -1,6 +1,6 @@
 import { chromium } from "@playwright/test"
 
-const EXT_PATH = "/Users/leon/Documents/code/course/ai-job-agent/extension"
+const EXT_PATH = "/Users/leon/Documents/code/ai-coding/landr/extension"
 
 const MOCK_PAGE = `<!DOCTYPE html>
 <html><head><title>高级前端工程师-字节跳动-Boss直聘</title></head><body>

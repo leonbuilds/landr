@@ -1,7 +1,7 @@
 // PM2 ecosystem config for Alibaba Cloud ECS deployment
 module.exports = {
   apps: [{
-    name: "ai-job-agent",
+    name: "landr",
     script: "node_modules/.bin/next",
     args: "start",
     cwd: __dirname,

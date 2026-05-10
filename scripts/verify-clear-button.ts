@@ -6,7 +6,7 @@ import * as fs from "node:fs"
 
 const DEEPSEEK_KEY = process.env.DEEPSEEK_KEY!
 const BASE = "http://localhost:3000"
-const SHOTS = "/Users/leon/Documents/code/course/ai-job-agent/docs/screenshots"
+const SHOTS = "/Users/leon/Documents/code/ai-coding/landr/docs/screenshots"
 
 async function main() {
   fs.mkdirSync(SHOTS, { recursive: true })

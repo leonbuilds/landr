@@ -4,8 +4,8 @@ async function main() {
   const ctx = await chromium.launchPersistentContext("/tmp/aija-v4", {
     headless: false,
     args: [
-      "--disable-extensions-except=/Users/leon/Documents/code/course/ai-job-agent/extension",
-      "--load-extension=/Users/leon/Documents/code/course/ai-job-agent/extension",
+      "--disable-extensions-except=/Users/leon/Documents/code/ai-coding/landr/extension",
+      "--load-extension=/Users/leon/Documents/code/ai-coding/landr/extension",
     ],
     viewport: { width: 1440, height: 900 },
   })

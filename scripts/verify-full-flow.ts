@@ -6,8 +6,8 @@ import * as path from "node:path"
 
 const DEEPSEEK_KEY = process.env.DEEPSEEK_KEY!
 const RESUME_PDF = "/Users/leon/Downloads/孙亮亮个人简历.pdf"
-const EXT_DIR = "/Users/leon/Documents/code/course/ai-job-agent/extension"
-const SHOTS = "/Users/leon/Documents/code/course/ai-job-agent/docs/screenshots"
+const EXT_DIR = "/Users/leon/Documents/code/ai-coding/landr/extension"
+const SHOTS = "/Users/leon/Documents/code/ai-coding/landr/docs/screenshots"
 const BASE = "http://localhost:3000"
 const STATE = "/tmp/aija-fullflow"
 

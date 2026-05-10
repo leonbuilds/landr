@@ -3,7 +3,7 @@ import { chromium } from "@playwright/test"
 import * as fs from "node:fs"
 
 const BASE = "http://localhost:3000"
-const SHOTS = "/Users/leon/Documents/code/course/ai-job-agent/docs/screenshots"
+const SHOTS = "/Users/leon/Documents/code/ai-coding/landr/docs/screenshots"
 
 const assertions: { name: string; ok: boolean; detail?: string }[] = []
 function check(name: string, ok: boolean, detail?: string) {

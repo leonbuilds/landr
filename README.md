@@ -1,6 +1,8 @@
 <div align="center">
 
-# AI 求职 Agent
+# Landr
+
+### **Land the job. — AI 求职 Agent**
 
 **简历理解 → 岗位匹配 → 面试准备 → 智能投递**
 **One agent for the entire job-hunting workflow.**
@@ -19,7 +21,7 @@
 
 ## 📖 项目介绍
 
-**AI 求职 Agent** 是一款面向求职者的**全链路智能助手**,把"找工作"这件事拆成可被 LLM 自动化的若干环节,并用一套连贯的 Agent 工作流串起来:
+**Landr** 是一款面向求职者的**全链路智能助手**,把"找工作"这件事拆成可被 LLM 自动化的若干环节,并用一套连贯的 Agent 工作流串起来:
 
 ```
 [上传简历] → [AI 三维度诊断] → [抓取/录入岗位] → [简历-岗位匹配评分]
@@ -90,8 +92,8 @@
 
 ```bash
 # 1. clone & 装依赖
-git clone https://github.com/liangliang125977/ai-job-agent.git
-cd ai-job-agent
+git clone https://github.com/liangliang125977/landr.git
+cd landr
 pnpm install
 
 # 2. 初始化数据库
@@ -124,7 +126,7 @@ pnpm lint          # ESLint
 1. Chrome 打开 `chrome://extensions`
 2. 开启右上角「开发者模式」
 3. 点击「加载已解压的扩展程序」,选择本仓库的 `extension/` 目录
-4. 在扩展的「选项」页,填入你的 AI 求职 Agent 主站地址(默认 `http://localhost:3000`)与登录 Token
+4. 在扩展的「选项」页,填入你的 Landr 主站地址(默认 `http://localhost:3000`)与登录 Token
 
 ### 工作原理
 
@@ -151,7 +153,7 @@ pnpm lint          # ESLint
 ```bash
 pnpm build
 pm2 start ecosystem.config.cjs
-pm2 logs ai-job-agent
+pm2 logs landr
 ```
 
 `ecosystem.config.cjs` 已配置好实例数 / 日志路径 / 环境变量加载。
@@ -166,7 +168,7 @@ pm2 logs ai-job-agent
 ## 📁 项目结构
 
 ```
-ai-job-agent/
+landr/
 ├── app/                  # Next.js App Router · 页面 + Route Handlers
 ├── extension/            # Chrome MV3 扩展(独立模块)
 │   ├── background/       # Service Worker:SearchTask + JdFetchTask 轮询
@@ -220,8 +222,8 @@ MIT © [liangliang125977](https://github.com/liangliang125977)
 
 - **作者**:阿亮 · 一线 AI Agent 工程师 · vibe coding 实战派
 - **品牌**:[与智行 · YuZhiXing](https://github.com/liangliang125977) — AI 工程化训练营 · 大模型咨询落地
-- **报告 issue**:[GitHub Issues](https://github.com/liangliang125977/ai-job-agent/issues)
+- **报告 issue**:[GitHub Issues](https://github.com/liangliang125977/landr/issues)
 
-> **AI 求职 Agent** 是与智行 (YuZhiXing) 案例库中的旗舰项目之一,
+> **Landr** 是与智行 (YuZhiXing) 案例库中的旗舰开源项目,
 > 展示如何用同一套 SPEC + 检查点 + Skills 工程方法论,
-> 把一个想法做到上线、可维护、可商业化。
+> 把一个 vibe coding 想法做到上线、可维护、可商业化。
