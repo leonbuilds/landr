@@ -4,7 +4,7 @@
 import { chromium } from "@playwright/test"
 import * as fs from "node:fs"
 
-const DEEPSEEK_KEY = process.env.DEEPSEEK_KEY || "sk-a1b68a24c4664a40936dfe618048ecd8"
+const DEEPSEEK_KEY = process.env.DEEPSEEK_KEY!
 const BASE = "http://localhost:3000"
 const SHOTS = "/Users/leon/Documents/code/course/ai-job-agent/docs/screenshots"
 
