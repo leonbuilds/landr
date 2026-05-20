@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ResumeUpload } from "@/components/resumes/resume-upload"
 import { DiagnosisCard } from "@/components/resumes/diagnosis-card"
+import { BatchRankDialog } from "@/components/resumes/batch-rank-dialog"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
-import { FileText, Plus, Trash2 } from "lucide-react"
+import { FileText, Plus, Trash2, Sparkles } from "lucide-react"
 import type { Resume, DiagnosisResult } from "@/types"
 
 export default function ResumesPage() {
@@ -18,6 +19,7 @@ export default function ResumesPage() {
   const [diagnosing, setDiagnosing] = useState<number | null>(null)
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null)
   const [selectedResume, setSelectedResume] = useState<number | null>(null)
+  const [rankResume, setRankResume] = useState<{ id: number; name: string } | null>(null)
 
   const fetchResumes = useCallback(async () => {
     const headers = getHeaders()
@@ -109,6 +111,13 @@ export default function ResumesPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setRankResume({ id: resume.id, name: resume.name })}
+                  >
+                    <Sparkles className="mr-1 h-4 w-4" />批量排名
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleDiagnose(resume.id)}
                     disabled={diagnosing === resume.id}
                   >
@@ -133,6 +142,14 @@ export default function ResumesPage() {
           ))}
         </div>
       )}
+
+      <BatchRankDialog
+        open={!!rankResume}
+        resumeId={rankResume?.id ?? null}
+        resumeName={rankResume?.name ?? ""}
+        onClose={() => setRankResume(null)}
+        getHeaders={getHeaders}
+      />
     </div>
   )
 }
