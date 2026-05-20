@@ -46,6 +46,8 @@ export function ApplicationDrawer({ applicationId, onClose, onUpdated, getHeader
   const [app, setApp] = useState<Application | null>(null)
   const [loading, setLoading] = useState(false)
   const [notes, setNotes] = useState("")
+  const [nextFollowup, setNextFollowup] = useState("") // yyyy-MM-dd 或空
+  const [savingFollowup, setSavingFollowup] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [generating, setGenerating] = useState<string | null>(null) // "cover-letter" | "interview-prep"
   const [errMsg, setErrMsg] = useState("")
@@ -62,6 +64,7 @@ export function ApplicationDrawer({ applicationId, onClose, onUpdated, getHeader
       const d = (await r.json()).data as Application
       setApp(d)
       setNotes(d.notes || "")
+      setNextFollowup(d.nextFollowup ? new Date(d.nextFollowup).toISOString().slice(0, 10) : "")
     } finally { setLoading(false) }
   }, [applicationId, getHeaders])
 
@@ -142,6 +145,21 @@ export function ApplicationDrawer({ applicationId, onClose, onUpdated, getHeader
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function handleSaveFollowup() {
+    if (!app) return
+    setSavingFollowup(true); setErrMsg(""); setOkMsg("")
+    try {
+      const r = await fetch(`/api/applications/${app.id}`, {
+        method: "PUT",
+        headers: { ...getHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ nextFollowup: nextFollowup || null, notes }),
+      })
+      if (!r.ok) { setErrMsg((await r.json()).error?.message || "保存失败"); return }
+      setOkMsg("已保存跟进时间")
+      onUpdated()
+    } finally { setSavingFollowup(false) }
   }
 
   async function handleDelete() {
@@ -331,15 +349,47 @@ export function ApplicationDrawer({ applicationId, onClose, onUpdated, getHeader
                   </TabsContent>
                 </Tabs>
 
-                {/* Notes */}
-                <section>
-                  <h3 className="text-sm font-semibold mb-2">备注</h3>
-                  <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="记录沟通进展、HR 反馈、跟进时间…"
-                    rows={3}
-                  />
+                {/* Notes + 下次跟进 */}
+                <section className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">下次跟进</h3>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={nextFollowup}
+                        onChange={(e) => setNextFollowup(e.target.value)}
+                        className="px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      {nextFollowup && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setNextFollowup("")}
+                          className="text-gray-500"
+                        >
+                          清除
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSaveFollowup}
+                        disabled={savingFollowup}
+                      >
+                        {savingFollowup ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "保存"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">设置后到期会在看板顶部&ldquo;待跟进&rdquo;面板中提醒</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">备注</h3>
+                    <Textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="记录沟通进展、HR 反馈、跟进时间…"
+                      rows={3}
+                    />
+                  </div>
                 </section>
               </>
             )}

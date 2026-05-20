@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { KanbanBoard } from "@/components/board/kanban-board"
 import { ApplicationDrawer } from "@/components/board/application-drawer"
+import { FollowupPanel } from "@/components/board/followup-panel"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -69,11 +70,14 @@ export default function BoardPage() {
       </div>
 
       {tab === "board" && (
-        <KanbanBoard
-          applications={applications}
-          onStatusChange={handleStatusChange}
-          onCardClick={handleCardClick}
-        />
+        <>
+          <FollowupPanel applications={applications} onSelect={handleCardClick} />
+          <KanbanBoard
+            applications={applications}
+            onStatusChange={handleStatusChange}
+            onCardClick={handleCardClick}
+          />
+        </>
       )}
 
       <ApplicationDrawer
