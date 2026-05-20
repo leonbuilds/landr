@@ -6,11 +6,30 @@ const MODEL_CONFIGS: Record<string, { baseURL: string; model: string }> = {
   qwen: { baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-turbo" },
 }
 
-export async function callLLM(
-  prompt: string,
-  apiKey: string,
-  provider: string = "deepseek"
-): Promise<string> {
+export const SUPPORTED_PROVIDERS = ["deepseek", "kimi", "qwen"] as const
+export type Provider = (typeof SUPPORTED_PROVIDERS)[number]
+
+// Errors whose status code indicates the call can be retried.
+// 408 timeout, 409 conflict (unusual), 425 too early, 429 rate limit, 5xx server errors.
+function isRetryableStatus(status: number | undefined): boolean {
+  if (!status) return true // network-level failure (no response) — retry
+  return status === 408 || status === 425 || status === 429 || status >= 500
+}
+
+function extractStatus(err: unknown): number | undefined {
+  if (err && typeof err === "object") {
+    const e = err as { status?: number; response?: { status?: number } }
+    return e.status ?? e.response?.status
+  }
+  return undefined
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// 单次重试参数：3 次重试，等待 1s/2s/4s
+const RETRY_DELAYS_MS = [1000, 2000, 4000]
+
+async function callLLMOnce(prompt: string, apiKey: string, provider: string): Promise<string> {
   const config = MODEL_CONFIGS[provider] || MODEL_CONFIGS.deepseek
   const client = new OpenAI({ apiKey, baseURL: config.baseURL })
   const response = await client.chat.completions.create({
@@ -19,6 +38,56 @@ export async function callLLM(
     temperature: 0.7,
   })
   return response.choices[0].message.content || ""
+}
+
+export async function callLLM(
+  prompt: string,
+  apiKey: string,
+  provider: string = "deepseek"
+): Promise<string> {
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await callLLMOnce(prompt, apiKey, provider)
+    } catch (err) {
+      lastErr = err
+      const status = extractStatus(err)
+      if (!isRetryableStatus(status)) throw err
+      if (attempt === RETRY_DELAYS_MS.length) break
+      await sleep(RETRY_DELAYS_MS[attempt])
+    }
+  }
+  throw lastErr
+}
+
+export interface ProviderKey {
+  provider: string
+  apiKey: string
+}
+
+/**
+ * 在多个 provider 之间降级：依次尝试 primary、备用 1、备用 2…
+ * 单个 provider 内部已带重试。每个 provider 失败后切换到下一个。
+ * 如果所有 provider 都失败，抛出最后一个错误。
+ */
+export async function callLLMWithFallback(
+  prompt: string,
+  providers: ProviderKey[]
+): Promise<{ output: string; usedProvider: string }> {
+  if (providers.length === 0) {
+    throw new Error("no provider configured")
+  }
+  let lastErr: unknown
+  for (const p of providers) {
+    try {
+      const output = await callLLM(prompt, p.apiKey, p.provider)
+      return { output, usedProvider: p.provider }
+    } catch (err) {
+      lastErr = err
+      // 401/403 表示 key 无效 — 不应当被认为是「服务挂了」，但仍然继续尝试其他 provider
+    }
+  }
+  throw lastErr
 }
 
 export function parseJsonFromLLM<T>(raw: string): T {
