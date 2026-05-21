@@ -77,3 +77,39 @@ prompt 拿空 JD 跑 LLM 出来的分基本是噪音 — 功能在跑但结果�
 - 失败一次自动重试 (隔 1h)
 - 优先级队列 (看板 applied 状态优先)
 - L3 自动打招呼 (Boss 风控线明确不踩)
+
+## 2026-05-03 visionOS / Glassmorphism 视觉改版 (`feat/visionos-redesign`)
+
+### 选型
+四个候选风格 (D 现代 SaaS / E 新中式编辑 / F visionOS / 混搭) HTML demo 对比, 选 F:
+多彩 mesh 光晕 + 玻璃卡片 + 渐变强调色, 区别于满屏 SaaS 工具的同质化观感.
+
+### 完成
+- [x] `globals.css` 全套设计 token: bg-elevated/glass-edge/mesh 五色/shadow-glass/语义 hi-med-lo + `.glass` `.glass-strong` `.glass-card` `.gradient-text` `.ring-mesh` 工具类
+- [x] body 多色 radial-gradient mesh + SVG 噪点 overlay (visionOS 质感), `background-attachment: fixed`
+- [x] `Button` 6 variants 全改: 紫蓝渐变主 CTA / 玫红渐变 destructive / glass outline / 软玻璃 secondary / ghost / link
+- [x] `Badge` 7 variants: 渐变默认 + 带边语义 success/warning/danger
+- [x] `Card` `Input` `Textarea` 玻璃化, focus-ring 改紫色 mesh
+- [x] `Sidebar` 整体玻璃, mesh 渐变 logo + 头像, 等宽 mono 二级标签 (Workspace/Insights/System)
+- [x] `JobsPage` 加面包屑 + 渐变标题问候 + 真实空态 glass-card
+- [x] `JobCard` 玻璃卡片 + hover translate-y + mono 数字 + 平台标签
+
+### 验证
+- [x] vitest 26/26 pass
+- [x] lint exit 0
+- [x] 5 张 visionOS 截图归档 docs/screenshots/v-*.png
+
+### Simplify 后处理
+- [x] `Badge` 移除基类 `backdrop-blur-md` (列表里成倍叠加, 性能负担)
+- [x] `JobCard` `transition-all` → `transition-transform` (避免 hover shadow 触发 repaint)
+- [x] `JobCard` `JSON.parse(parsedJson)` 包 `useMemo`
+- [x] 干掉 `const stats = { total: jobs.length }` 单字段包装
+- [x] 删 `// Topbar` `// Greeting` `// Logo` 等 narration 注释
+- [x] 删未使用的 `.gradient-bg-primary` 工具类
+
+### 不在本期 (后续 PR)
+- 把 `--text` `--muted` `--dim` `--mesh-*` 桥到 `@theme inline`, 让 `text-muted` / `bg-mesh-sky` 成为真 Tailwind 工具类 — 当前到处 `style={{color:"var(--muted)"}}` 是这个缺位的副作用
+- `/board` `/jobs/[id]` `/resumes` `/settings` `/extension-setup` + auth 三页迁移 (仍是 `text-gray-*` `bg-white`)
+- 共享 UI 原子 `dialog` `dropdown-menu` `select` `tabs` `tooltip` `switch` `scroll-area` `separator` `avatar` 玻璃化
+- `Input` / `Textarea` 抽 `.glass-input` 共享类
+- `JobCard` 改回用 `<Card>` + `<Badge>` 原子 (本期直接写 `glass-card` div)

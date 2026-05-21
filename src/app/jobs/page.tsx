@@ -34,12 +34,35 @@ export default function JobsPage() {
   if (!isAuthenticated) return null
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">岗位库</h1>
+        <div className="flex items-center gap-2 text-[12.5px] font-mono" style={{ color: "var(--muted)" }}>
+          <span>Workspace</span>
+          <span style={{ color: "var(--dim)" }}>/</span>
+          <span style={{ color: "var(--text)" }} className="font-semibold font-sans">岗位库</span>
+          <span style={{ color: "var(--dim)" }}>·</span>
+          <span>{jobs.length} jobs</span>
+        </div>
         <Button onClick={() => setShowInput(true)}>
-          <Plus className="mr-2 h-4 w-4" />添加岗位
+          <Plus className="h-4 w-4" />添加岗位
         </Button>
+      </div>
+
+      <div>
+        <div className="text-[11.5px] font-mono uppercase tracking-wider" style={{ color: "var(--muted)" }}>
+          下午好
+        </div>
+        <h1 className="text-[32px] font-semibold leading-[1.15] -tracking-[0.03em] mt-1.5 max-w-[780px]">
+          {jobs.length > 0 ? (
+            <>
+              你的岗位库里有 <span className="gradient-text">{jobs.length} 个岗位</span>
+              <br />
+              点开任何一个跑 AI 匹配，分数会出现在卡片上。
+            </>
+          ) : (
+            <>用一句话告诉 AI，<span className="gradient-text">替你翻完三页 Boss</span>。</>
+          )}
+        </h1>
       </div>
 
       <AutoSearch getHeaders={getHeaders} onJobsImported={fetchJobs} />
@@ -52,19 +75,42 @@ export default function JobsPage() {
       />
 
       {jobs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center rounded-lg border-2 border-dashed">
-          <Briefcase className="h-12 w-12 text-gray-300 mb-4" />
-          <p className="text-gray-500 mb-1">还没有添加岗位</p>
-          <p className="text-sm text-gray-400 mb-4">点击添加第一个目标岗位</p>
+        <div
+          className="glass-card flex flex-col items-center justify-center py-20 text-center"
+          style={{ borderStyle: "dashed" }}
+        >
+          <Briefcase className="h-12 w-12 mb-4" style={{ color: "var(--dim)" }} />
+          <p className="text-[14px] mb-1" style={{ color: "var(--muted)" }}>
+            还没有岗位
+          </p>
+          <p className="text-[12.5px] mb-5" style={{ color: "var(--dim)" }}>
+            用上方 AI 搜岗位，或手动添加一个目标
+          </p>
           <Button variant="outline" onClick={() => setShowInput(true)}>
-            <Plus className="mr-2 h-4 w-4" />添加岗位
+            <Plus className="h-4 w-4" />添加岗位
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-[17px] font-semibold -tracking-[0.025em]">
+                本周适合你的岗位{" "}
+                <span className="text-[14px] font-normal" style={{ color: "var(--muted)" }}>
+                  by AI match
+                </span>
+              </h2>
+              <div className="text-[11px] font-mono mt-0.5" style={{ color: "var(--muted)" }}>
+                {jobs.length} jobs · sorted by match score
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {jobs.map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
         </div>
       )}
     </div>
