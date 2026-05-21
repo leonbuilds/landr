@@ -8,11 +8,13 @@ import { ResumeUpload } from "@/components/resumes/resume-upload"
 import { DiagnosisCard } from "@/components/resumes/diagnosis-card"
 import { BatchRankDialog } from "@/components/resumes/batch-rank-dialog"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
+import { useToast } from "@/components/shared/toast"
 import { FileText, Plus, Trash2, Sparkles } from "lucide-react"
 import type { Resume, DiagnosisResult } from "@/types"
 
 export default function ResumesPage() {
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
+  const toast = useToast()
   const [resumes, setResumes] = useState<Resume[]>([])
   const [loading, setLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
@@ -52,11 +54,18 @@ export default function ResumesPage() {
       if (json.data) {
         setDiagnosis(json.data as DiagnosisResult)
         setSelectedResume(id)
+        toast.show({ kind: "success", title: "诊断完成", description: "看下方评分卡片，可按建议改简历" })
       } else {
-        alert(json.error?.message || "诊断失败")
+        const msg = json.error?.message || "诊断失败"
+        toast.show({
+          kind: "error",
+          title: "诊断失败",
+          description: msg,
+          action: msg.includes("API Key") ? { label: "去设置", href: "/settings" } : undefined,
+        })
       }
     } catch {
-      alert("诊断请求失败")
+      toast.show({ kind: "error", title: "诊断请求失败", description: "网络或服务异常，请稍后重试" })
     } finally {
       setDiagnosing(null)
     }

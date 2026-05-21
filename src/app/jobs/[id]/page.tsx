@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MatchVisual } from "@/components/jobs/match-visual"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
+import { useToast } from "@/components/shared/toast"
 import { ChevronDown, ChevronUp, ArrowLeft, ExternalLink, Loader2, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import type { Job, Resume } from "@/types"
@@ -38,6 +39,7 @@ type CoverLetterData = { subject: string; body: string; tone: string }
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { isAuthenticated, isLoading: authLoading, getHeaders } = useAuth()
+  const toast = useToast()
   const [job, setJob] = useState<Job | null>(null)
   const [resumes, setResumes] = useState<Resume[]>([])
   const [selectedResume, setSelectedResume] = useState("")
@@ -90,11 +92,24 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       const json = await res.json()
       if (json.data) {
         setMatchResult(json.data)
+        toast.show({
+          kind: "success",
+          title: `匹配完成 · ${json.data.match.score} 分`,
+          description: "已为你创建一条申请记录，可继续生成求职信 / 面试题，或去看板管理。",
+          action: { label: "去看板", href: "/board" },
+          duration: 6000,
+        })
       } else {
-        alert(json.error?.message || "匹配失败")
+        const msg = json.error?.message || "匹配失败"
+        toast.show({
+          kind: "error",
+          title: "匹配失败",
+          description: msg,
+          action: msg.includes("API Key") ? { label: "去设置", href: "/settings" } : undefined,
+        })
       }
     } catch {
-      alert("匹配请求失败")
+      toast.show({ kind: "error", title: "匹配请求失败", description: "网络或服务异常，请稍后重试" })
     } finally {
       setMatching(false)
     }
