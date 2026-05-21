@@ -32,7 +32,17 @@ export function FollowupPanel({ applications, onSelect }: FollowupPanelProps) {
     })
     .sort((a, b) => b.info.diffDays - a.info.diffDays) // 大 diff = 更逾期 = 排前
 
-  if (items.length === 0) return null
+  // 即使没有待跟进项, 也保留一个低调的占位, 让用户知道这个面板存在
+  if (items.length === 0) {
+    return (
+      <Card className="border-gray-200 bg-gray-50/40">
+        <CardContent className="p-4 flex items-center gap-2 text-sm text-gray-500">
+          <BellRing className="h-4 w-4" />
+          <span>暂无待跟进事项 — 在卡片详情里设置「下次跟进」日期, 到期会在这里提醒。</span>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const overdueCount = items.filter((i) => i.info.overdue).length
   const todayCount = items.filter((i) => i.info.dueToday).length

@@ -118,7 +118,7 @@ export function BatchRankDialog({ open, resumeId, resumeName, onClose, getHeader
 
         {result && !loading && (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm bg-gray-50 px-3 py-2 rounded">
+            <div className="flex items-center gap-3 text-sm bg-gray-50 px-3 py-2 rounded flex-wrap">
               <span>共 {result.total} 个岗位</span>
               <span className="text-gray-400">·</span>
               <span className="text-blue-600">{result.computed} 新评分</span>
@@ -127,7 +127,16 @@ export function BatchRankDialog({ open, resumeId, resumeName, onClose, getHeader
               {result.skipped > 0 && (
                 <>
                   <span className="text-gray-400">·</span>
-                  <span className="text-orange-600">{result.skipped} 个本轮未评（再次点击继续）</span>
+                  <span className="text-orange-600 font-medium">{result.skipped} 个本轮未评</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRank}
+                    className="ml-auto"
+                  >
+                    <Sparkles className="mr-1 h-3.5 w-3.5" />
+                    继续评剩余 {result.skipped} 个
+                  </Button>
                 </>
               )}
             </div>
