@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
-import { Eye, EyeOff, CheckCircle2, XCircle, Copy } from "lucide-react"
+import { Eye, EyeOff, CheckCircle2, XCircle, Copy, Sparkles } from "lucide-react"
+import { emitLlmKeyChanged } from "@/hooks/use-llm-status"
 
 const MODELS = [
   { key: "deepseek", name: "DeepSeek" },
@@ -17,6 +19,8 @@ const MODELS = [
 ]
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams()
+  const isWelcome = searchParams?.get("welcome") === "1"
   const { isAuthenticated, isLoading: authLoading, getHeaders, logout } = useAuth()
   const [loading, setLoading] = useState(true)
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
@@ -61,6 +65,7 @@ export default function SettingsPage() {
       body: JSON.stringify({ [`api_key_${model}`]: key }),
     })
     fetchSettings()
+    emitLlmKeyChanged()
   }
 
   const testConnection = async (model: string) => {
@@ -127,6 +132,23 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">设置</h1>
+
+      {isWelcome && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900">欢迎使用 Landr 👋 第一步：配置 AI 模型 Key</p>
+                <p className="text-xs text-blue-800 mt-1">
+                  Landr 的 AI 功能依赖你自己的 LLM Key —— DeepSeek / Kimi / 通义千问 任选其一。Key 加密存储，多个 Key 时自动降级。
+                  配好后可以下方点「测试」验证连通性。
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* API Keys */}
       <Card>
