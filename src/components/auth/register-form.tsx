@@ -50,8 +50,8 @@ export function RegisterForm() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-blue-600">AI求职Agent</CardTitle>
-          <CardDescription>创建账号，开启智能求职之旅</CardDescription>
+          <CardTitle className="text-2xl text-blue-600">Landr</CardTitle>
+          <CardDescription>注册账号，开启 AI 求职之旅</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
