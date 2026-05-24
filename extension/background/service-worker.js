@@ -196,17 +196,27 @@ async function runSearchTask(task, base, apiKey) {
   // mustInclude 过滤 (按标题 AND, 大小写不敏感)
   const { kept, filtered } = filterByMustInclude(dedup, mustInclude)
 
-  const status = kept.length === 0 ? "failed" : "done"
+  // Fallback: 严格过滤后 0 个但原始抓到 >0 时, 保留全部, 让用户自己筛
+  // (mustInclude 词跟实际岗位标题用词不一致时容易 0 命中, 例如 "技术负责人"
+  // 在 Boss 上对应的实际标题多是 "技术专家/架构师/技术经理")
+  let finalJobs = kept
+  let fallbackUsed = false
+  if (kept.length === 0 && dedup.length > 0 && mustInclude.length > 0) {
+    finalJobs = dedup
+    fallbackUsed = true
+  }
+
+  const status = finalJobs.length === 0 ? "failed" : "done"
   let message
-  if (kept.length === 0) {
-    message = filtered > 0
-      ? `共采到 ${dedup.length} 个岗位，但都不含「${mustInclude.join("、")}」关键词被过滤掉。试着放宽搜索词或换个 query 主词。`
-      : (lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）")
+  if (finalJobs.length === 0) {
+    message = lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）"
+  } else if (fallbackUsed) {
+    message = `共采到 ${dedup.length} 个岗位，按「${mustInclude.join("、")}」严格过滤后 0 个匹配 — 已保留全部供你手动筛选。${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
   } else {
     const filterNote = filtered > 0 ? `（按「${mustInclude.join("、")}」过滤掉 ${filtered} 个不相关岗位）` : ""
-    message = `共提取 ${kept.length} 个岗位${filterNote}${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
+    message = `共提取 ${finalJobs.length} 个岗位${filterNote}${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
   }
-  await patchTask(base, apiKey, task.id, { status, jobs: kept, message })
+  await patchTask(base, apiKey, task.id, { status, jobs: finalJobs, message })
 }
 
 // ---------- JD 二次抓取任务轮询 ----------
