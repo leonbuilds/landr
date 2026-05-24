@@ -109,10 +109,35 @@ async function waitForBossReady(tabId, base, apiKey, taskId, maxSec = 90) {
   return false
 }
 
+/**
+ * Boss 搜索框对多词输入是 OR 拆词，会带回大量偏离主意图的岗位。
+ * Server 端把意图拆成 (query, mustInclude[]) 后，扩展在这里按 mustInclude
+ * 对岗位**标题**做大小写不敏感的 AND 子串过滤，把噪音剔掉。
+ */
+function filterByMustInclude(jobs, mustInclude) {
+  if (!Array.isArray(mustInclude) || mustInclude.length === 0) return { kept: jobs, filtered: 0 }
+  const needles = mustInclude
+    .map((w) => (typeof w === "string" ? w.trim().toLowerCase() : ""))
+    .filter(Boolean)
+  if (needles.length === 0) return { kept: jobs, filtered: 0 }
+  const kept = []
+  let filtered = 0
+  for (const j of jobs) {
+    const t = (j.title || "").toLowerCase()
+    if (needles.every((n) => t.includes(n))) {
+      kept.push(j)
+    } else {
+      filtered++
+    }
+  }
+  return { kept, filtered }
+}
+
 async function runSearchTask(task, base, apiKey) {
   await patchTask(base, apiKey, task.id, { status: "running", message: "正在打开 Boss 第 1 页…" })
   const allJobs = []
   let lastErr = null
+  const mustInclude = (task.params && task.params.mustInclude) || []
 
   for (let i = 0; i < task.urls.length; i++) {
     const url = task.urls[i]
@@ -168,11 +193,20 @@ async function runSearchTask(task, base, apiKey) {
     dedup.push(j)
   }
 
-  const status = dedup.length === 0 ? "failed" : "done"
-  const message = dedup.length === 0
-    ? (lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）")
-    : `共提取 ${dedup.length} 个岗位${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
-  await patchTask(base, apiKey, task.id, { status, jobs: dedup, message })
+  // mustInclude 过滤 (按标题 AND, 大小写不敏感)
+  const { kept, filtered } = filterByMustInclude(dedup, mustInclude)
+
+  const status = kept.length === 0 ? "failed" : "done"
+  let message
+  if (kept.length === 0) {
+    message = filtered > 0
+      ? `共采到 ${dedup.length} 个岗位，但都不含「${mustInclude.join("、")}」关键词被过滤掉。试着放宽搜索词或换个 query 主词。`
+      : (lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）")
+  } else {
+    const filterNote = filtered > 0 ? `（按「${mustInclude.join("、")}」过滤掉 ${filtered} 个不相关岗位）` : ""
+    message = `共提取 ${kept.length} 个岗位${filterNote}${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
+  }
+  await patchTask(base, apiKey, task.id, { status, jobs: kept, message })
 }
 
 // ---------- JD 二次抓取任务轮询 ----------

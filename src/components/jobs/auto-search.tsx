@@ -13,6 +13,7 @@ import { Loader2, Search, Check, Clock, AlertCircle, ExternalLink, X, Trash2 } f
 
 interface Plan {
   query: string
+  mustInclude?: string[]
   city: string
   salaryMin: number
   salaryMax: number
@@ -224,6 +225,17 @@ export function AutoSearch({
                 <div><span className="text-gray-500">薪资：</span>{plan.salaryMin || plan.salaryMax ? `${plan.salaryMin}K-${plan.salaryMax}K` : "不限"}</div>
                 <div><span className="text-gray-500">经验：</span>{plan.experience || "不限"}</div>
               </div>
+              {plan.mustInclude && plan.mustInclude.length > 0 && (
+                <div className="mt-2 text-xs flex items-start gap-1.5 flex-wrap">
+                  <span className="text-gray-500 flex-shrink-0">标题必含：</span>
+                  {plan.mustInclude.map((kw, i) => (
+                    <span key={i} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[11px]">
+                      {kw}
+                    </span>
+                  ))}
+                  <span className="text-gray-400 text-[11px] ml-1">扩展会过滤掉标题不含这些词的岗位</span>
+                </div>
+              )}
               <div className="mt-2 text-xs">
                 <span className="text-gray-500">预览 URL（第1页）：</span>
                 <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1 break-all">
@@ -285,7 +297,11 @@ export function AutoSearch({
                   <div key={t.id} className="flex items-center gap-2 text-sm py-1">
                     {statusBadge(t)}
                     <span className="text-gray-700 truncate flex-1">
-                      {params.query} · {params.city} · {(params.salaryMin || params.salaryMax) ? `${params.salaryMin}K-${params.salaryMax}K` : "不限"} · {params.pages}页
+                      {params.query}
+                      {Array.isArray(params.mustInclude) && params.mustInclude.length > 0 && (
+                        <span className="text-gray-500"> + 含「{params.mustInclude.join("、")}」</span>
+                      )}
+                      {" · "}{params.city} · {(params.salaryMin || params.salaryMax) ? `${params.salaryMin}K-${params.salaryMax}K` : "不限"} · {params.pages}页
                     </span>
                     {t.status === "done" && (
                       <span className="text-xs text-gray-500">采到 {t.collected} / 跳过 {t.skipped}</span>

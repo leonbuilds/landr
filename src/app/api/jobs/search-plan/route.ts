@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { getAuthUserId } from "@/lib/auth"
 import { callLLM, parseJsonFromLLM, SEARCH_PLAN_PROMPT } from "@/lib/ai"
 import { decrypt } from "@/lib/crypto"
-import { buildBossSearchUrl, type SearchPlan } from "@/lib/boss-search"
+import { buildBossSearchUrl, normalizeMustInclude, type SearchPlan } from "@/lib/boss-search"
 
 export async function POST(req: NextRequest) {
   const userId = await getAuthUserId(req)
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
     plan.city = plan.city || "全国"
     plan.salaryMin = Number(plan.salaryMin) || 0
     plan.salaryMax = Number(plan.salaryMax) || 0
+    plan.mustInclude = normalizeMustInclude(plan.mustInclude, plan.query)
 
     const previewUrl = buildBossSearchUrl(plan, 1)
 

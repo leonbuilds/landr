@@ -61,6 +61,12 @@ export function bossSalaryCode(minK: number, maxK: number): number {
 
 export interface SearchPlan {
   query: string
+  /**
+   * 岗位标题必须同时包含的关键词 (AND, 大小写不敏感)。
+   * Boss 搜索对多词 query 是 OR 拆词, 所以需要扩展端按标题二次过滤
+   * 才能消除「Java 技术负责人」搜出一堆土建「技术负责人」这种偏离。
+   */
+  mustInclude?: string[]
   city: string
   salaryMin: number
   salaryMax: number
@@ -80,9 +86,29 @@ export function buildBossSearchUrl(plan: SearchPlan, page = 1): string {
   return `https://www.zhipin.com/web/geek/job?${params.toString()}`
 }
 
+/** 过滤掉无意义/重复/为空的 mustInclude 词 (与 query 同义的词没意义) */
+export function normalizeMustInclude(raw: unknown, query?: string): string[] {
+  if (!Array.isArray(raw)) return []
+  const queryLower = (query || "").toLowerCase().trim()
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const v of raw) {
+    if (typeof v !== "string") continue
+    const trimmed = v.trim()
+    if (!trimmed) continue
+    const lower = trimmed.toLowerCase()
+    if (lower === queryLower) continue // query 已经发给 Boss, 不重复
+    if (seen.has(lower)) continue
+    seen.add(lower)
+    out.push(trimmed)
+  }
+  return out
+}
+
 export function planToParamsJson(plan: SearchPlan, pages = 3) {
   return JSON.stringify({
     query: plan.query,
+    mustInclude: normalizeMustInclude(plan.mustInclude, plan.query),
     city: plan.city,
     cityCode: BOSS_CITY_CODES[plan.city] || BOSS_CITY_CODES["全国"],
     salaryMin: plan.salaryMin,

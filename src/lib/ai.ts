@@ -218,19 +218,30 @@ export const REWRITE_PROMPT = `你是一位专业简历写手。请根据以下�
 
 export const SEARCH_PLAN_PROMPT = `你是一位求职助手。用户用一句话描述了找工作意向（或给出简历摘要）。请把它解析成 Boss 直聘的搜索参数。返回纯 JSON（不要 markdown 代码块）。
 
+⚠️ 重要：Boss 直聘的搜索框对多词输入会按空格做 OR 拆词，所以「Java 技术负责人」会变成 (Java 或 技术 或 负责人)，搜出来大量纯「技术负责人」的工地岗。所以：
+- query 字段只放**一个最具区分度的关键词**（通常是技能名或具体岗位词，越窄越好）
+- 其它必须出现的词（岗位级别/角色/平台名 等）放到 mustInclude 数组里，扩展会拿这些词对岗位**标题**做二次过滤（AND 关系，大小写不敏感）
+
 输入：
 {{INPUT}}
 
 返回格式（字段都尽量填，不确定就给保守默认）：
 {
-  "query": "前端开发",          // 主搜索关键词，岗位名/技能/方向，单一词或短语
+  "query": "Java",              // 单一关键词，发给 Boss 的搜索框。优先选技能名/具体岗位词
+  "mustInclude": ["技术负责人"], // 标题必须同时包含的词（AND）。没有就空数组
   "city": "北京",               // 城市中文名，默认 "全国"
   "salaryMin": 30,              // 期望最低月薪 K，整数；用户没说就 0
   "salaryMax": 60,              // 期望最高月薪 K，整数；用户没说就 0
   "experience": "3-5年",        // 经验年限，可空字符串
   "companies": [],              // 用户特别点名的公司名数组，没就空数组
-  "explanation": "我的理解：用户在找北京前端 30K-60K 的高级岗"
-}`
+  "explanation": "我的理解：用户在找北京 Java 技术负责人，30-60K。Boss 主搜 Java，标题过滤含「技术负责人」"
+}
+
+几个例子：
+- 输入「Java 技术负责人 北京」→ query="Java", mustInclude=["技术负责人"], city="北京"
+- 输入「前端 React 高级工程师」→ query="React", mustInclude=["高级","前端"], city="全国"
+- 输入「字节跳动 Python 30K+」→ query="Python", mustInclude=[], companies=["字节跳动"], salaryMin=30
+- 输入「产品经理 上海」→ query="产品经理", mustInclude=[], city="上海"（单一词不需要拆）`
 
 export const GREETING_PROMPT = `你是一位求职者。基于以下简历和岗位 JD，写一段在 Boss 直聘上发给 HR 的"立即沟通"打招呼语。
 
