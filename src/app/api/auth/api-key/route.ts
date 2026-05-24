@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getAuthUserId } from "@/lib/auth"
-import { encrypt, decrypt, maskApiKey } from "@/lib/crypto"
+import { encrypt, decrypt } from "@/lib/crypto"
 import crypto from "crypto"
 
 function generateKey(): string {
@@ -27,8 +27,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data: { key, isNew: true } })
   }
 
+  // 用户已通过会话鉴权, 查自己的 Key 直接返明文。
+  // 客户端默认显示遮罩, 复制按钮可触发明文复制 — 安全边界没扩大。
   return NextResponse.json({
-    data: { key: maskApiKey(decrypt(existing.value)), isNew: false },
+    data: { key: decrypt(existing.value), isNew: false },
   })
 }
 
