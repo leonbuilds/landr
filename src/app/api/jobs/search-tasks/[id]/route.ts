@@ -110,7 +110,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   return corsResponse({ data: updated })
 }
 
-// DELETE /api/jobs/search-tasks/:id  —  UI"取消"按钮：把 pending/running 改成 failed
+// DELETE /api/jobs/search-tasks/:id
+//   - pending/running: 取消 → 状态置 failed (扩展看到后会停)
+//   - done/failed: 硬删行 (用户清理任务历史)
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const userId = await authedUserId(req)
@@ -122,7 +124,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return corsResponse({ error: { code: "NOT_FOUND" } }, 404)
   }
   if (task.status === "done" || task.status === "failed") {
-    return corsResponse({ data: task }) // already terminal, idempotent
+    await prisma.searchTask.delete({ where: { id: taskId } })
+    return corsResponse({ data: { deleted: true } })
   }
   const updated = await prisma.searchTask.update({
     where: { id: taskId },

@@ -33,15 +33,43 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ data: tasks })
 }
 
+// DELETE /api/jobs/search-tasks?scope=incomplete|completed|all
+//   incomplete (默认, 向后兼容): pending/running → failed (取消, 保留行)
+//   completed: 硬删 done/failed 行 (清空历史)
+//   all: 硬删全部
 export async function DELETE(req: NextRequest) {
   const userId = await getAuthUserId(req)
   if (!userId) return NextResponse.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 })
 
-  const r = await prisma.searchTask.updateMany({
-    where: { userId, status: { in: ["pending", "running"] } },
-    data: { status: "failed", message: "用户手动取消" },
-  })
-  return NextResponse.json({ data: { canceled: r.count } })
+  const scope = (new URL(req.url).searchParams.get("scope") || "incomplete") as
+    | "incomplete"
+    | "completed"
+    | "all"
+
+  if (scope === "incomplete") {
+    const r = await prisma.searchTask.updateMany({
+      where: { userId, status: { in: ["pending", "running"] } },
+      data: { status: "failed", message: "用户手动取消" },
+    })
+    return NextResponse.json({ data: { canceled: r.count } })
+  }
+
+  if (scope === "completed") {
+    const r = await prisma.searchTask.deleteMany({
+      where: { userId, status: { in: ["done", "failed"] } },
+    })
+    return NextResponse.json({ data: { deleted: r.count } })
+  }
+
+  if (scope === "all") {
+    const r = await prisma.searchTask.deleteMany({ where: { userId } })
+    return NextResponse.json({ data: { deleted: r.count } })
+  }
+
+  return NextResponse.json(
+    { error: { code: "BAD_REQUEST", message: "scope 必须是 incomplete / completed / all" } },
+    { status: 400 }
+  )
 }
 
 export async function POST(req: NextRequest) {

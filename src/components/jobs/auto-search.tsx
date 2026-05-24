@@ -274,20 +274,36 @@ export function AutoSearch({
                   return n > 0 ? <span className="ml-1 text-amber-600">· {n} 个进行中</span> : null
                 })()}
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-xs text-red-600 hover:bg-red-50 h-7 disabled:text-gray-400"
-                disabled={!tasks.some((t) => t.status === "pending" || t.status === "running")}
-                onClick={async () => {
-                  if (!confirm("清空所有等待中和运行中的任务？")) return
-                  await fetch("/api/jobs/search-tasks", { method: "DELETE", headers: getHeaders() })
-                  const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
-                  if (r.ok) setTasks((await r.json()).data || [])
-                }}
-              >
-                <Trash2 className="h-3 w-3 mr-1" />清空未完成
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-red-600 hover:bg-red-50 h-7 disabled:text-gray-400"
+                  disabled={!tasks.some((t) => t.status === "pending" || t.status === "running")}
+                  onClick={async () => {
+                    if (!confirm("清空所有等待中和运行中的任务？")) return
+                    await fetch("/api/jobs/search-tasks?scope=incomplete", { method: "DELETE", headers: getHeaders() })
+                    const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                    if (r.ok) setTasks((await r.json()).data || [])
+                  }}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />清空未完成
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-gray-600 hover:bg-gray-100 h-7 disabled:text-gray-400"
+                  disabled={!tasks.some((t) => t.status === "done" || t.status === "failed")}
+                  onClick={async () => {
+                    if (!confirm("清空所有已完成和已失败的任务记录？\n岗位库里已采到的岗位不会被删除。")) return
+                    await fetch("/api/jobs/search-tasks?scope=completed", { method: "DELETE", headers: getHeaders() })
+                    const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                    if (r.ok) setTasks((await r.json()).data || [])
+                  }}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />清空已完成
+                </Button>
+              </div>
             </div>
             <div className="space-y-1">
               {tasks.slice(0, 5).map((t) => {
@@ -309,19 +325,17 @@ export function AutoSearch({
                     {t.message && t.status !== "done" && (
                       <span className="text-xs text-gray-500 truncate max-w-xs" title={t.message}>{t.message}</span>
                     )}
-                    {cancelable && (
-                      <button
-                        className="text-gray-400 hover:text-red-600 p-1"
-                        title="取消该任务"
-                        onClick={async () => {
-                          await fetch(`/api/jobs/search-tasks/${t.id}`, { method: "DELETE", headers: getHeaders() })
-                          const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
-                          if (r.ok) setTasks((await r.json()).data || [])
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
+                    <button
+                      className="text-gray-400 hover:text-red-600 p-1"
+                      title={cancelable ? "取消该任务" : "删除该任务记录"}
+                      onClick={async () => {
+                        await fetch(`/api/jobs/search-tasks/${t.id}`, { method: "DELETE", headers: getHeaders() })
+                        const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                        if (r.ok) setTasks((await r.json()).data || [])
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
                 )
               })}
