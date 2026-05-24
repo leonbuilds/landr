@@ -16,6 +16,33 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ data: jobs })
 }
 
+// DELETE /api/jobs?scope=all|untouched
+//   all (默认): 清空当前用户所有岗位; 已生成的 Application 会因 onDelete: SetNull
+//               保留, 但 jobId 变 null (失去关联, 仍可在看板看见)
+//   untouched: 只删没有对应 Application 的岗位 (即从未匹配过的)
+export async function DELETE(req: NextRequest) {
+  const userId = await getAuthUserId(req)
+  if (!userId) return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "请先登录" } }, { status: 401 })
+
+  const scope = (new URL(req.url).searchParams.get("scope") || "all") as "all" | "untouched"
+
+  if (scope === "untouched") {
+    // 找出所有「没有任何 Application 关联」的 job
+    const orphanJobs = await prisma.job.findMany({
+      where: { userId, applications: { none: {} } },
+      select: { id: true },
+    })
+    const ids = orphanJobs.map((j) => j.id)
+    if (ids.length === 0) return NextResponse.json({ data: { deleted: 0 } })
+    const r = await prisma.job.deleteMany({ where: { id: { in: ids } } })
+    return NextResponse.json({ data: { deleted: r.count } })
+  }
+
+  // scope=all
+  const r = await prisma.job.deleteMany({ where: { userId } })
+  return NextResponse.json({ data: { deleted: r.count } })
+}
+
 export async function POST(req: NextRequest) {
   const userId = await getAuthUserId(req)
   if (!userId) return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "请先登录" } }, { status: 401 })
