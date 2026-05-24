@@ -1,18 +1,41 @@
 import mammoth from "mammoth"
 import PdfParser from "pdf2json"
 
+// pdf2json 把每段文本 URL-encode 后返回。某些字符 (特殊 emoji /
+// 简历模板的特殊字形 / 截断的 % 序列) 会让 decodeURIComponent 抛 URIError —
+// 由于这是在 event handler 里同步抛的, 外层 Promise 永远 pending,
+// 整个 POST /api/resumes 会卡住没响应。所以这里逐段 try/catch 兜底。
+function safeDecodeURIComponent(s: string): string {
+  try {
+    return decodeURIComponent(s)
+  } catch {
+    // 退路 1: 把孤立 % 转义掉再 decode 一次
+    try {
+      return decodeURIComponent(s.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"))
+    } catch {
+      // 退路 2: 实在不行就返回原文 (至少不丢段, 给后续 LLM 兜底)
+      return s
+    }
+  }
+}
+
 export async function parsePdf(buffer: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
     const parser = new PdfParser()
     parser.on("pdfParser_dataReady", (data: { Pages: { Texts: { R: { T: string }[] }[] }[] }) => {
-      const texts: string[] = []
-      for (const page of data.Pages) {
-        for (const text of page.Texts) {
-          const line = text.R.map((r) => decodeURIComponent(r.T)).join(" ")
-          texts.push(line)
+      try {
+        const texts: string[] = []
+        for (const page of data.Pages) {
+          for (const text of page.Texts) {
+            const line = text.R.map((r) => safeDecodeURIComponent(r.T)).join(" ")
+            texts.push(line)
+          }
         }
+        resolve(texts.join("\n"))
+      } catch (err) {
+        // 防御：哪怕事件处理器里抛了别的, 也要让 Promise 进入终态, 不能挂住 route
+        reject(err instanceof Error ? err : new Error(String(err)))
       }
-      resolve(texts.join("\n"))
     })
     parser.on("pdfParser_dataError", reject)
     parser.parseBuffer(buffer)
