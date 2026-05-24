@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AI求职Agent - 岗位采集",
+  "name": "Landr - 岗位采集",
   "version": "1.0",
-  "description": "一键采集Boss直聘、LinkedIn、拉勾、智联、小红书的岗位信息到AI求职Agent",
+  "description": "一键采集 Boss 直聘 / LinkedIn / 拉勾 / 智联 / 小红书 的岗位信息到 Landr",
   "permissions": ["storage", "activeTab", "tabs", "alarms"],
   "host_permissions": [
     "*://*.zhipin.com/*",
@@ -30,7 +30,7 @@
   },
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "AI求职Agent",
+    "default_title": "Landr",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

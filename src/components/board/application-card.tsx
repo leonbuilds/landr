@@ -3,8 +3,9 @@
 import { useDraggable } from "@dnd-kit/core"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Calendar } from "lucide-react"
+import { Building2, Calendar, BellRing } from "lucide-react"
 import type { Application } from "@/types"
+import { describeFollowup } from "@/lib/followup"
 
 interface ApplicationCardProps {
   application: Application
@@ -12,6 +13,7 @@ interface ApplicationCardProps {
 }
 
 export function ApplicationCard({ application, onClick }: ApplicationCardProps) {
+  const followup = describeFollowup(application.nextFollowup)
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: String(application.id),
   })
@@ -25,7 +27,7 @@ export function ApplicationCard({ application, onClick }: ApplicationCardProps) 
       <Card
         className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
           isDragging ? "opacity-50 shadow-lg" : ""
-        }`}
+        } ${followup?.overdue ? "border-red-300 bg-red-50/40" : ""}`}
         onClick={onClick}
       >
         <CardContent className="p-3 space-y-2">
@@ -54,6 +56,21 @@ export function ApplicationCard({ application, onClick }: ApplicationCardProps) 
             <div className="flex items-center gap-1 text-xs text-gray-400">
               <Calendar className="h-3 w-3" />
               {new Date(application.appliedAt).toLocaleDateString("zh-CN")}
+            </div>
+          )}
+
+          {followup && (
+            <div
+              className={`flex items-center gap-1 text-xs font-medium ${
+                followup.overdue
+                  ? "text-red-600"
+                  : followup.dueToday
+                  ? "text-orange-600"
+                  : "text-blue-600"
+              }`}
+            >
+              <BellRing className="h-3 w-3" />
+              {followup.label}
             </div>
           )}
         </CardContent>

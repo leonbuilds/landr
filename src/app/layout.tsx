@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI求职Agent",
-  description: "AI驱动的智能求职助手",
+  title: "Landr · AI 求职助手",
+  description: "用 AI 把求职从「海投」升级为「精准出击」",
 };
 
 export default function RootLayout({

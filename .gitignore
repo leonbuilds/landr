@@ -51,3 +51,6 @@ prisma/dev.db.bak.*
 # scratch / 临时实验脚本和资产 — 仅本地把玩, 不入库
 scripts/_*
 docs/screenshots/mockup-*
+
+# Claude Code 本地配置
+.claude/

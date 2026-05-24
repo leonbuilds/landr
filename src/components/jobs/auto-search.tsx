@@ -13,6 +13,7 @@ import { Loader2, Search, Check, Clock, AlertCircle, ExternalLink, X, Trash2 } f
 
 interface Plan {
   query: string
+  mustInclude?: string[]
   city: string
   salaryMin: number
   salaryMax: number
@@ -224,6 +225,17 @@ export function AutoSearch({
                 <div><span className="text-gray-500">薪资：</span>{plan.salaryMin || plan.salaryMax ? `${plan.salaryMin}K-${plan.salaryMax}K` : "不限"}</div>
                 <div><span className="text-gray-500">经验：</span>{plan.experience || "不限"}</div>
               </div>
+              {plan.mustInclude && plan.mustInclude.length > 0 && (
+                <div className="mt-2 text-xs flex items-start gap-1.5 flex-wrap">
+                  <span className="text-gray-500 flex-shrink-0">标题必含：</span>
+                  {plan.mustInclude.map((kw, i) => (
+                    <span key={i} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[11px]">
+                      {kw}
+                    </span>
+                  ))}
+                  <span className="text-gray-400 text-[11px] ml-1">扩展会过滤掉标题不含这些词的岗位</span>
+                </div>
+              )}
               <div className="mt-2 text-xs">
                 <span className="text-gray-500">预览 URL（第1页）：</span>
                 <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1 break-all">
@@ -262,20 +274,36 @@ export function AutoSearch({
                   return n > 0 ? <span className="ml-1 text-amber-600">· {n} 个进行中</span> : null
                 })()}
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-xs text-red-600 hover:bg-red-50 h-7 disabled:text-gray-400"
-                disabled={!tasks.some((t) => t.status === "pending" || t.status === "running")}
-                onClick={async () => {
-                  if (!confirm("清空所有等待中和运行中的任务？")) return
-                  await fetch("/api/jobs/search-tasks", { method: "DELETE", headers: getHeaders() })
-                  const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
-                  if (r.ok) setTasks((await r.json()).data || [])
-                }}
-              >
-                <Trash2 className="h-3 w-3 mr-1" />清空未完成
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-red-600 hover:bg-red-50 h-7 disabled:text-gray-400"
+                  disabled={!tasks.some((t) => t.status === "pending" || t.status === "running")}
+                  onClick={async () => {
+                    if (!confirm("清空所有等待中和运行中的任务？")) return
+                    await fetch("/api/jobs/search-tasks?scope=incomplete", { method: "DELETE", headers: getHeaders() })
+                    const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                    if (r.ok) setTasks((await r.json()).data || [])
+                  }}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />清空未完成
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-gray-600 hover:bg-gray-100 h-7 disabled:text-gray-400"
+                  disabled={!tasks.some((t) => t.status === "done" || t.status === "failed")}
+                  onClick={async () => {
+                    if (!confirm("清空所有已完成和已失败的任务记录？\n岗位库里已采到的岗位不会被删除。")) return
+                    await fetch("/api/jobs/search-tasks?scope=completed", { method: "DELETE", headers: getHeaders() })
+                    const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                    if (r.ok) setTasks((await r.json()).data || [])
+                  }}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />清空已完成
+                </Button>
+              </div>
             </div>
             <div className="space-y-1">
               {tasks.slice(0, 5).map((t) => {
@@ -285,7 +313,11 @@ export function AutoSearch({
                   <div key={t.id} className="flex items-center gap-2 text-sm py-1">
                     {statusBadge(t)}
                     <span className="text-gray-700 truncate flex-1">
-                      {params.query} · {params.city} · {(params.salaryMin || params.salaryMax) ? `${params.salaryMin}K-${params.salaryMax}K` : "不限"} · {params.pages}页
+                      {params.query}
+                      {Array.isArray(params.mustInclude) && params.mustInclude.length > 0 && (
+                        <span className="text-gray-500"> + 含「{params.mustInclude.join("、")}」</span>
+                      )}
+                      {" · "}{params.city} · {(params.salaryMin || params.salaryMax) ? `${params.salaryMin}K-${params.salaryMax}K` : "不限"} · {params.pages}页
                     </span>
                     {t.status === "done" && (
                       <span className="text-xs text-gray-500">采到 {t.collected} / 跳过 {t.skipped}</span>
@@ -293,19 +325,17 @@ export function AutoSearch({
                     {t.message && t.status !== "done" && (
                       <span className="text-xs text-gray-500 truncate max-w-xs" title={t.message}>{t.message}</span>
                     )}
-                    {cancelable && (
-                      <button
-                        className="text-gray-400 hover:text-red-600 p-1"
-                        title="取消该任务"
-                        onClick={async () => {
-                          await fetch(`/api/jobs/search-tasks/${t.id}`, { method: "DELETE", headers: getHeaders() })
-                          const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
-                          if (r.ok) setTasks((await r.json()).data || [])
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
+                    <button
+                      className="text-gray-400 hover:text-red-600 p-1"
+                      title={cancelable ? "取消该任务" : "删除该任务记录"}
+                      onClick={async () => {
+                        await fetch(`/api/jobs/search-tasks/${t.id}`, { method: "DELETE", headers: getHeaders() })
+                        const r = await fetch("/api/jobs/search-tasks", { headers: getHeaders() })
+                        if (r.ok) setTasks((await r.json()).data || [])
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
                 )
               })}

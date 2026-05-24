@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { LoadingSpinner } from "@/components/shared/loading-spinner"
-import { Eye, EyeOff, CheckCircle2, XCircle, Copy } from "lucide-react"
+import { Eye, EyeOff, CheckCircle2, XCircle, Copy, Sparkles } from "lucide-react"
+import { emitLlmKeyChanged } from "@/hooks/use-llm-status"
+
+function maskApiKeyDisplay(key: string): string {
+  if (!key || key.length <= 8) return "****"
+  return key.slice(0, 4) + "****" + key.slice(-4)
+}
 
 const MODELS = [
   { key: "deepseek", name: "DeepSeek" },
@@ -17,6 +24,8 @@ const MODELS = [
 ]
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams()
+  const isWelcome = searchParams?.get("welcome") === "1"
   const { isAuthenticated, isLoading: authLoading, getHeaders, logout } = useAuth()
   const [loading, setLoading] = useState(true)
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
@@ -61,6 +70,7 @@ export default function SettingsPage() {
       body: JSON.stringify({ [`api_key_${model}`]: key }),
     })
     fetchSettings()
+    emitLlmKeyChanged()
   }
 
   const testConnection = async (model: string) => {
@@ -127,6 +137,23 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">设置</h1>
+
+      {isWelcome && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900">欢迎使用 Landr 👋 第一步：配置 AI 模型 Key</p>
+                <p className="text-xs text-blue-800 mt-1">
+                  Landr 的 AI 功能依赖你自己的 LLM Key —— DeepSeek / Kimi / 通义千问 任选其一。Key 加密存储，多个 Key 时自动降级。
+                  配好后可以下方点「测试」验证连通性。
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* API Keys */}
       <Card>
@@ -287,7 +314,8 @@ export default function SettingsPage() {
 }
 
 function ExtensionApiKeySection({ getHeaders }: { getHeaders: () => Record<string, string> }) {
-  const [apiKey, setApiKey] = useState("")
+  const [apiKey, setApiKey] = useState("") // 真实明文 (从 GET 接口拿到)
+  const [revealed, setRevealed] = useState(false) // 是否在 UI 上展示明文
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isNew, setIsNew] = useState(false)
@@ -300,11 +328,14 @@ function ExtensionApiKeySection({ getHeaders }: { getHeaders: () => Record<strin
       if (json.data) {
         setApiKey(json.data.key)
         setIsNew(json.data.isNew)
+        // 第一次生成时直接展示明文方便复制
+        if (json.data.isNew) setRevealed(true)
       }
     } catch {} finally { setLoading(false) }
   }
 
   const regenerateKey = async () => {
+    if (apiKey && !confirm("重新生成会让现有 Key 立即失效（已配置的扩展需要重新填写）。继续？")) return
     setLoading(true)
     try {
       const res = await fetch("/api/auth/api-key", { method: "POST", headers: getHeaders() })
@@ -312,42 +343,78 @@ function ExtensionApiKeySection({ getHeaders }: { getHeaders: () => Record<strin
       if (json.data) {
         setApiKey(json.data.key)
         setIsNew(true)
+        setRevealed(true)
       }
     } catch {} finally { setLoading(false) }
   }
+
+  const handleCopy = async () => {
+    if (!apiKey) return
+    try {
+      await navigator.clipboard.writeText(apiKey)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard API 不可用时 fallback (HTTP 环境会到这)
+      const ta = document.createElement("textarea")
+      ta.value = apiKey
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand("copy") } catch {}
+      ta.remove()
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const displayValue = !apiKey
+    ? ""
+    : revealed
+    ? apiKey
+    : maskApiKeyDisplay(apiKey)
 
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
         <Input
           type="text"
-          value={apiKey}
+          value={displayValue}
           readOnly
-          placeholder="点击生成按钮获取API Key"
+          placeholder="点击下方「查看 API Key」获取"
           className="font-mono text-sm"
         />
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { navigator.clipboard.writeText(apiKey); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-          disabled={!apiKey || apiKey.includes("*")}
+          onClick={() => setRevealed((v) => !v)}
+          disabled={!apiKey}
+          title={revealed ? "隐藏" : "显示明文"}
+        >
+          {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCopy}
+          disabled={!apiKey}
+          title="复制完整 Key"
         >
           {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
         </Button>
       </div>
       {isNew && (
-        <p className="text-xs text-green-600">新Key已生成，请立即复制！刷新后将脱敏显示。</p>
+        <p className="text-xs text-green-600">新 Key 已生成。点复制图标可复制到剪贴板。</p>
       )}
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={fetchKey} disabled={loading}>
-          查看API Key
+          {apiKey ? "刷新" : "查看 API Key"}
         </Button>
         <Button variant="outline" size="sm" onClick={regenerateKey} disabled={loading}>
           重新生成
         </Button>
       </div>
       <p className="text-xs text-gray-400">
-        将此Key填入Chrome扩展的选项页（右键扩展图标→选项），即可从招聘网站一键采集岗位。
+        将此 Key 填入 Chrome 扩展的选项页（右键扩展图标 → 选项），即可从招聘网站一键采集岗位。
       </p>
     </div>
   )

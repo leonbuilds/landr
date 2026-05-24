@@ -79,7 +79,8 @@ export function useAuth() {
       localStorage.setItem("token", token)
       localStorage.setItem("user", JSON.stringify(user))
       setState({ user, token, isAuthenticated: true, isLoading: false })
-      router.push("/resumes")
+      // 新用户必经一步：配置 AI Key, 否则后续 AI 功能都报错。
+      router.push("/settings?welcome=1")
       return user
     },
     [router]

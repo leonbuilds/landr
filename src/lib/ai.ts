@@ -6,11 +6,30 @@ const MODEL_CONFIGS: Record<string, { baseURL: string; model: string }> = {
   qwen: { baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-turbo" },
 }
 
-export async function callLLM(
-  prompt: string,
-  apiKey: string,
-  provider: string = "deepseek"
-): Promise<string> {
+export const SUPPORTED_PROVIDERS = ["deepseek", "kimi", "qwen"] as const
+export type Provider = (typeof SUPPORTED_PROVIDERS)[number]
+
+// Errors whose status code indicates the call can be retried.
+// 408 timeout, 409 conflict (unusual), 425 too early, 429 rate limit, 5xx server errors.
+function isRetryableStatus(status: number | undefined): boolean {
+  if (!status) return true // network-level failure (no response) — retry
+  return status === 408 || status === 425 || status === 429 || status >= 500
+}
+
+function extractStatus(err: unknown): number | undefined {
+  if (err && typeof err === "object") {
+    const e = err as { status?: number; response?: { status?: number } }
+    return e.status ?? e.response?.status
+  }
+  return undefined
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// 单次重试参数：3 次重试，等待 1s/2s/4s
+const RETRY_DELAYS_MS = [1000, 2000, 4000]
+
+async function callLLMOnce(prompt: string, apiKey: string, provider: string): Promise<string> {
   const config = MODEL_CONFIGS[provider] || MODEL_CONFIGS.deepseek
   const client = new OpenAI({ apiKey, baseURL: config.baseURL })
   const response = await client.chat.completions.create({
@@ -19,6 +38,56 @@ export async function callLLM(
     temperature: 0.7,
   })
   return response.choices[0].message.content || ""
+}
+
+export async function callLLM(
+  prompt: string,
+  apiKey: string,
+  provider: string = "deepseek"
+): Promise<string> {
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await callLLMOnce(prompt, apiKey, provider)
+    } catch (err) {
+      lastErr = err
+      const status = extractStatus(err)
+      if (!isRetryableStatus(status)) throw err
+      if (attempt === RETRY_DELAYS_MS.length) break
+      await sleep(RETRY_DELAYS_MS[attempt])
+    }
+  }
+  throw lastErr
+}
+
+export interface ProviderKey {
+  provider: string
+  apiKey: string
+}
+
+/**
+ * 在多个 provider 之间降级：依次尝试 primary、备用 1、备用 2…
+ * 单个 provider 内部已带重试。每个 provider 失败后切换到下一个。
+ * 如果所有 provider 都失败，抛出最后一个错误。
+ */
+export async function callLLMWithFallback(
+  prompt: string,
+  providers: ProviderKey[]
+): Promise<{ output: string; usedProvider: string }> {
+  if (providers.length === 0) {
+    throw new Error("no provider configured")
+  }
+  let lastErr: unknown
+  for (const p of providers) {
+    try {
+      const output = await callLLM(prompt, p.apiKey, p.provider)
+      return { output, usedProvider: p.provider }
+    } catch (err) {
+      lastErr = err
+      // 401/403 表示 key 无效 — 不应当被认为是「服务挂了」，但仍然继续尝试其他 provider
+    }
+  }
+  throw lastErr
 }
 
 export function parseJsonFromLLM<T>(raw: string): T {
@@ -149,19 +218,38 @@ export const REWRITE_PROMPT = `你是一位专业简历写手。请根据以下�
 
 export const SEARCH_PLAN_PROMPT = `你是一位求职助手。用户用一句话描述了找工作意向（或给出简历摘要）。请把它解析成 Boss 直聘的搜索参数。返回纯 JSON（不要 markdown 代码块）。
 
+⚠️ 重要：Boss 直聘的搜索框对多词输入会按空格做 OR 拆词，所以「Java 技术负责人」会变成 (Java 或 技术 或 负责人)，搜出来大量纯「技术负责人」的工地岗。所以：
+- query 字段只放**一个最具区分度的关键词**（通常是技能名或具体岗位词，越窄越好）
+- 其它必须出现的词放到 mustInclude 数组里，扩展会拿这些词对岗位**标题**做二次过滤
+
+⚠️ mustInclude 选词原则（关乎召回率）：
+- 必须是**Boss 岗位标题里高概率字面出现**的词（技能名、技术名、具体职位名）
+- ❌ 不要用抽象角色复合词（如「技术负责人」「业务总监」），因为 Boss 标题用词不统一，可能写成「技术专家」「架构师」「技术经理」，硬过滤会 0 命中
+- ✅ 用单字角色词或同义集（如「负责人」「经理」「专家」「架构」「资深」），命中率高很多
+- 如果用户意图本身就比较抽象（如「资深 Java」），mustInclude 可以留空，让 Boss 自己排序
+
 输入：
 {{INPUT}}
 
 返回格式（字段都尽量填，不确定就给保守默认）：
 {
-  "query": "前端开发",          // 主搜索关键词，岗位名/技能/方向，单一词或短语
+  "query": "Java",              // 单一关键词，发给 Boss 的搜索框
+  "mustInclude": ["负责人"],     // 标题必须同时包含的词（AND, 字面匹配）。没有就空数组
   "city": "北京",               // 城市中文名，默认 "全国"
   "salaryMin": 30,              // 期望最低月薪 K，整数；用户没说就 0
   "salaryMax": 60,              // 期望最高月薪 K，整数；用户没说就 0
   "experience": "3-5年",        // 经验年限，可空字符串
   "companies": [],              // 用户特别点名的公司名数组，没就空数组
-  "explanation": "我的理解：用户在找北京前端 30K-60K 的高级岗"
-}`
+  "explanation": "Boss 主搜 Java，标题过滤含「负责人」（覆盖 技术负责人/项目负责人 等）"
+}
+
+几个例子：
+- 输入「Java 技术负责人 北京」→ query="Java", mustInclude=["负责人"], city="北京"
+  （用「负责人」而不是「技术负责人」，避免命中不到「Java 技术专家」这种实际叫法）
+- 输入「前端 React 高级工程师」→ query="React", mustInclude=["高级"], city="全国"
+  （只保留命中率高的「高级」一个词，「前端」可能跟 React 强相关无需重复）
+- 输入「字节跳动 Python 30K+」→ query="Python", mustInclude=[], companies=["字节跳动"], salaryMin=30
+- 输入「产品经理 上海」→ query="产品经理", mustInclude=[], city="上海"（单一词不需要拆）`
 
 export const GREETING_PROMPT = `你是一位求职者。基于以下简历和岗位 JD，写一段在 Boss 直聘上发给 HR 的"立即沟通"打招呼语。
 

@@ -31,8 +31,8 @@ export function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-blue-600">AI求职Agent</CardTitle>
-          <CardDescription>登录你的账号，开始智能求职之旅</CardDescription>
+          <CardTitle className="text-2xl text-blue-600">Landr</CardTitle>
+          <CardDescription>登录你的账号，继续 AI 求职之旅</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">

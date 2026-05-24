@@ -109,10 +109,35 @@ async function waitForBossReady(tabId, base, apiKey, taskId, maxSec = 90) {
   return false
 }
 
+/**
+ * Boss 搜索框对多词输入是 OR 拆词，会带回大量偏离主意图的岗位。
+ * Server 端把意图拆成 (query, mustInclude[]) 后，扩展在这里按 mustInclude
+ * 对岗位**标题**做大小写不敏感的 AND 子串过滤，把噪音剔掉。
+ */
+function filterByMustInclude(jobs, mustInclude) {
+  if (!Array.isArray(mustInclude) || mustInclude.length === 0) return { kept: jobs, filtered: 0 }
+  const needles = mustInclude
+    .map((w) => (typeof w === "string" ? w.trim().toLowerCase() : ""))
+    .filter(Boolean)
+  if (needles.length === 0) return { kept: jobs, filtered: 0 }
+  const kept = []
+  let filtered = 0
+  for (const j of jobs) {
+    const t = (j.title || "").toLowerCase()
+    if (needles.every((n) => t.includes(n))) {
+      kept.push(j)
+    } else {
+      filtered++
+    }
+  }
+  return { kept, filtered }
+}
+
 async function runSearchTask(task, base, apiKey) {
   await patchTask(base, apiKey, task.id, { status: "running", message: "正在打开 Boss 第 1 页…" })
   const allJobs = []
   let lastErr = null
+  const mustInclude = (task.params && task.params.mustInclude) || []
 
   for (let i = 0; i < task.urls.length; i++) {
     const url = task.urls[i]
@@ -168,11 +193,30 @@ async function runSearchTask(task, base, apiKey) {
     dedup.push(j)
   }
 
-  const status = dedup.length === 0 ? "failed" : "done"
-  const message = dedup.length === 0
-    ? (lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）")
-    : `共提取 ${dedup.length} 个岗位${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
-  await patchTask(base, apiKey, task.id, { status, jobs: dedup, message })
+  // mustInclude 过滤 (按标题 AND, 大小写不敏感)
+  const { kept, filtered } = filterByMustInclude(dedup, mustInclude)
+
+  // Fallback: 严格过滤后 0 个但原始抓到 >0 时, 保留全部, 让用户自己筛
+  // (mustInclude 词跟实际岗位标题用词不一致时容易 0 命中, 例如 "技术负责人"
+  // 在 Boss 上对应的实际标题多是 "技术专家/架构师/技术经理")
+  let finalJobs = kept
+  let fallbackUsed = false
+  if (kept.length === 0 && dedup.length > 0 && mustInclude.length > 0) {
+    finalJobs = dedup
+    fallbackUsed = true
+  }
+
+  const status = finalJobs.length === 0 ? "failed" : "done"
+  let message
+  if (finalJobs.length === 0) {
+    message = lastErr || "未提取到任何岗位（Boss 可能未登录或反爬）"
+  } else if (fallbackUsed) {
+    message = `共采到 ${dedup.length} 个岗位，按「${mustInclude.join("、")}」严格过滤后 0 个匹配 — 已保留全部供你手动筛选。${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
+  } else {
+    const filterNote = filtered > 0 ? `（按「${mustInclude.join("、")}」过滤掉 ${filtered} 个不相关岗位）` : ""
+    message = `共提取 ${finalJobs.length} 个岗位${filterNote}${lastErr ? "（中途出错: " + lastErr + "）" : ""}`
+  }
+  await patchTask(base, apiKey, task.id, { status, jobs: finalJobs, message })
 }
 
 // ---------- JD 二次抓取任务轮询 ----------

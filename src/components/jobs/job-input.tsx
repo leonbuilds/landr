@@ -197,7 +197,7 @@ export function JobInput({ open, onOpenChange, onSuccess, getHeaders }: JobInput
             </div>
 
             <p className="text-xs text-gray-400">
-              安装完成后，在Boss直聘、LinkedIn、拉勾、智联、小红书浏览岗位时，页面右下角会出现&ldquo;采集到AI求职Agent&rdquo;浮窗按钮。
+              安装完成后，在 Boss 直聘、LinkedIn、拉勾、智联、小红书浏览岗位时，页面右下角会出现&ldquo;采集到 Landr&rdquo;浮窗按钮。
             </p>
           </TabsContent>
         </Tabs>
